@@ -23,25 +23,97 @@ def save_data(df):
 
 df = load_data()
 
+# ----------------------------------------------------
+# Master Data Configuration
+# ----------------------------------------------------
+DEPARTMENTS = [
+    "Hematology",
+    "Biochemistry",
+    "Immunology",
+    "Microscopy",
+    "Microbiology",
+    "Blood bank"
+]
+
+TEST_LISTS = {
+    "Hematology": [
+        "CBC",
+        "PT&INR",
+        "DCIP",
+        "Hematocrit",
+        "ESR",
+        "Reticulocyte count",
+        "VCT",
+        "20 WBCT"
+    ],
+    "Biochemistry": [
+        "Glucose",
+        "BUN",
+        "Creatinine",
+        "Uric Acid",
+        "LFT",
+        "Lipid Profile",
+        "Electrolytes",
+        "HbA1c"
+    ],
+    "Immunology": [
+        "Anti-HIV",
+        "HBsAg",
+        "Anti-HCV",
+        "VDRL/RPR",
+        "Dengue NS1/Ab"
+    ],
+    "Microscopy": [
+        "Urinalysis",
+        "Stool Examination",
+        "Stool Occult Blood",
+        "Pregnancy Test"
+    ],
+    "Microbiology": [
+        "Gram Stain",
+        "AFB Stain",
+        "Culture & Sensitivity",
+        "KOH Preparation"
+    ],
+    "Blood bank": [
+        "ABO Grouping",
+        "Rh Grouping",
+        "Antibody Screening",
+        "Crossmatching"
+    ]
+}
+
 st.title("🔬 ระบบติดตามและประเมินผลประสิทธิภาพ EQA")
 st.markdown("---")
 
 tab1, tab2, tab3 = st.tabs(["📝 กรอกผล EQA", "📊 Dashboard สรุปผล", "📋 ประวัติและ Export ข้อมูล"])
 
-# TAB 1: DATA ENTRY
+# ====================================================
+# TAB 1: DATA ENTRY FORM
+# ====================================================
 with tab1:
     st.header("แบบฟอร์มบันทึกผล EQA")
     
     col_c1, col_c2 = st.columns(2)
     with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
-        department = st.selectbox("สาขาห้องปฏิบัติการ", [
-            "Chemical Pathology", "Hematology", "Microbiology", "Immunology"
-        ])
+        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS)
     
     with col_c2:
-        test_type = st.radio("ประเภทการทดสอบ", ["Quantitative (เชิงปริมาณ)", "Qualitative (เชิงคุณภาพ)"], horizontal=True)
-        test_name = st.text_input("ชื่อรายการทดสอบ (Test Name)", placeholder="เช่น Glucose, HbA1c, Anti-HIV")
+        test_type = st.radio(
+            "ประเภทการทดสอบ", 
+            ["Quantitative (เชิงปริมาณ)", "Qualitative (เชิงคุณภาพ)"], 
+            horizontal=True
+        )
+        
+        # Dynamic Test List Selection
+        available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
+        selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
+        
+        if selected_test == "อื่นๆ (ระบุเอง)":
+            test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม")
+        else:
+            test_name = selected_test
 
     st.markdown("### 📊 ใส่ผลการทดสอบ")
     
@@ -54,6 +126,7 @@ with tab1:
         with col_q3:
             sd_val = st.number_input("ค่า SD ของกลุ่ม (SD)", value=1.0, format="%.2f")
         
+        # Auto-calculate SDI & Status
         if sd_val > 0:
             sdi = (lab_res - assigned_val) / sd_val
             abs_sdi = abs(sdi)
@@ -77,9 +150,15 @@ with tab1:
     else:
         col_ql1, col_ql2 = st.columns(2)
         with col_ql1:
-            qual_lab = st.selectbox("ผลการตรวจของแล็บ", ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal"])
+            qual_lab = st.selectbox(
+                "ผลการตรวจของแล็บ", 
+                ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal", "Normal", "Abnormal"]
+            )
         with col_ql2:
-            qual_assigned = st.selectbox("ค่าจริง/ค่าอ้างอิง", ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal"])
+            qual_assigned = st.selectbox(
+                "ค่าจริง/ค่าอ้างอิง", 
+                ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal", "Normal", "Abnormal"]
+            )
             
         sdi = np.nan
         sd_val = np.nan
@@ -90,28 +169,33 @@ with tab1:
             status = "Unacceptable"
             st.error("สถานะ: ไม่ผ่านเกณฑ์ (Discordant / Disagree)")
 
-    remark = st.text_area("บันทึกเพิ่มเติม / สาเหตุกรณีไม่ผ่าน", placeholder="เช่น เปลี่ยน Lot Reagent, สอบเทียบเครื่องใหม่")
+    remark = st.text_area("บันทึกเพิ่มเติม / สาเหตุกรณีไม่ผ่าน (Root Cause/CAR)", placeholder="เช่น เปลี่ยน Lot Reagent, สอบเทียบเครื่องใหม่, Human Error")
 
     if st.button("💾 บันทึกผล EQA", type="primary"):
-        new_row = {
-            'Cycle': cycle,
-            'Department': department,
-            'Test_Name': test_name,
-            'Test_Type': 'Quantitative' if "Quantitative" in test_type else 'Qualitative',
-            'Lab_Result': qual_lab,
-            'Assigned_Value': qual_assigned,
-            'SD': sd_val,
-            'SDI': round(sdi, 2) if not np.isnan(sdi) else np.nan,
-            'Status': status,
-            'Remark': remark
-        }
-        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-        save_data(df)
-        st.cache_data.clear()
-        st.success("บันทึกข้อมูลเรียบร้อยแล้ว!")
-        st.rerun()
+        if not test_name:
+            st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
+        else:
+            new_row = {
+                'Cycle': cycle,
+                'Department': department,
+                'Test_Name': test_name,
+                'Test_Type': 'Quantitative' if "Quantitative" in test_type else 'Qualitative',
+                'Lab_Result': qual_lab,
+                'Assigned_Value': qual_assigned,
+                'SD': sd_val,
+                'SDI': round(sdi, 2) if not np.isnan(sdi) else np.nan,
+                'Status': status,
+                'Remark': remark
+            }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            save_data(df)
+            st.cache_data.clear()
+            st.success(f"บันทึกข้อมูลรายการ '{test_name}' สาขา '{department}' เรียบร้อยแล้ว!")
+            st.rerun()
 
-# TAB 2: DASHBOARD
+# ====================================================
+# TAB 2: DASHBOARD ANALYTICS
+# ====================================================
 with tab2:
     st.header("Dashboard สรุปผลและวิเคราะห์ประสิทธิภาพ")
     
@@ -171,7 +255,9 @@ with tab2:
     else:
         st.info("ยังไม่มีข้อมูลในระบบ")
 
+# ====================================================
 # TAB 3: DATA TABLE & EXPORT
+# ====================================================
 with tab3:
     st.header("ตารางข้อมูลทั้งหมด")
     st.dataframe(df, use_container_width=True)
