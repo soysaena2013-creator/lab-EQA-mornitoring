@@ -243,7 +243,7 @@ with tab1:
             st.markdown("---")
             st.markdown("###### **ส่วนที่ 2: Slide Smear**")
             
-            # ส่วนที่ 2.1 WBC differential count (จัดเรียงคอลัมน์: Parameter -> Mean -> SD -> Lab Result -> Lab DI -> Lab Performance)
+            # ส่วนที่ 2.1 WBC differential count
             st.markdown("**2.1 WBC differential count**")
             p21_data = []
             for param in CBC_SLIDE_WBC_PARAMS:
@@ -303,15 +303,14 @@ with tab1:
                         "สถานะปัญหา": f"Performance: {perf}"
                     })
 
-            # ส่วนที่ 2.2 RBC morphology
+            # ส่วนที่ 2.2 RBC morphology (ไม่มีคอลัมน์ Score ในตาราง, ใช้ช่องกรอกคะแนนรวมด้านล่าง)
             st.markdown("**2.2 RBC morphology**")
             p22_data = []
             for param in CBC_SLIDE_RBC_PARAMS:
                 p22_data.append({
                     "Parameter": param,
                     "Lab Result": "Normal",
-                    "Assigned Value": "Normal",
-                    "Score (0-4)": 4.0
+                    "Assigned Value": "Normal"
                 })
             df_p22 = pd.DataFrame(p22_data)
             
@@ -322,14 +321,13 @@ with tab1:
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
                     "Lab Result": st.column_config.TextColumn("Lab Result"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value"),
-                    "Score (0-4)": st.column_config.NumberColumn("Score", min_value=0.0, max_value=4.0, format="%.1f")
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
                 }
             )
             
-            p22_avg_score = edited_p22["Score (0-4)"].mean() if not edited_p22.empty else 0.0
-            p22_perf = evaluate_score_performance(p22_avg_score)
-            st.info(f"📊 คะแนนเฉลี่ย RBC morphology ของ {sample_id_input}: **{p22_avg_score:.2f}** | Performance: **{p22_perf}**")
+            p22_total_score = st.number_input(f"คะแนนรวม RBC morphology ของ {sample_id_input}", min_value=0.0, max_value=100.0, value=4.0, step=0.1, key=f"p22_score_{s_idx}")
+            p22_perf = evaluate_score_performance(p22_total_score)
+            st.info(f"📊 คะแนนรวม RBC morphology: **{p22_total_score:.2f}** | Performance รวม: **{p22_perf}**")
             
             for _, r in edited_p22.iterrows():
                 cbc_results_store.append({
@@ -344,15 +342,14 @@ with tab1:
                     'Performance': p22_perf
                 })
 
-            # ส่วนที่ 2.3 Platelet estimation
+            # ส่วนที่ 2.3 Platelet estimation (ไม่มีคอลัมน์ Score ในตาราง, ใช้ช่องกรอกคะแนนรวมด้านล่าง)
             st.markdown("**2.3 Platelet estimation**")
             p23_data = []
             for param in CBC_SLIDE_PLT_PARAMS:
                 p23_data.append({
                     "Parameter": param,
                     "Lab Result": "adequate",
-                    "Assigned Value": "adequate",
-                    "Score (0-4)": 4.0
+                    "Assigned Value": "adequate"
                 })
             df_p23 = pd.DataFrame(p23_data)
             
@@ -363,14 +360,13 @@ with tab1:
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
                     "Lab Result": st.column_config.TextColumn("Lab Result"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value"),
-                    "Score (0-4)": st.column_config.NumberColumn("Score", min_value=0.0, max_value=4.0, format="%.1f")
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
                 }
             )
             
-            p23_avg_score = edited_p23["Score (0-4)"].mean() if not edited_p23.empty else 0.0
-            p23_perf = evaluate_score_performance(p23_avg_score)
-            st.info(f"📊 คะแนนเฉลี่ย Platelet estimation ของ {sample_id_input}: **{p23_avg_score:.2f}** | Performance: **{p23_perf}**")
+            p23_total_score = st.number_input(f"คะแนนรวม Platelet estimation ของ {sample_id_input}", min_value=0.0, max_value=100.0, value=4.0, step=0.1, key=f"p23_score_{s_idx}")
+            p23_perf = evaluate_score_performance(p23_total_score)
+            st.info(f"📊 คะแนนรวม Platelet estimation: **{p23_total_score:.2f}** | Performance รวม: **{p23_perf}**")
             
             for _, r in edited_p23.iterrows():
                 cbc_results_store.append({
