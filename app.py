@@ -22,7 +22,6 @@ UA_PARAMETERS = [
     "Protein", "Glucose", "Ketone", "Urobilinogen", "Bilirubin", "Blood"
 ]
 
-# Dropdown Options สำหรับ UA
 UA_OPTIONS = {
     "Specific Gravity": ["1.000", "1.005", "1.010", "1.015", "1.020", "1.025", "1.030", "1.035"],
     "pH": ["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0"],
@@ -68,7 +67,7 @@ TEST_LISTS = {
     "Biochemistry": ["GLUCOSE", "BUN", "CREATININE", "URIC ACID", "CHOLESTEROL", "TRIGLYCERIDE", "HDL", "LDL", "TOTAL PROTEIN", "ALBUMIN", "TOTAL BILIRUBIN", "DIRECT BILIRUBIN", "AST", "ALT", "ALP", "CALCIUM", "MAGNESIUM", "PHOSPHORUS", "Na", "K", "Cl", "CO2", "Hba1c", "Micro-bilirubin", "Troponin I", "BGM STRIP"],
     "Immunology": ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Syphilis", "Leptospira antibody", "Scrub typhus antibody", "Rheumatoid factor", "melioid titer", "COVID-19 TEST", "Influenza A+B TEST", "COVID-19/Influenza A+B test", "COVID-19/Influenza A+B/RSV test", "Dengue NS1"],
     "Microbiology": ["AFB", "Gram's stain", "TB lamp", "KOH", "Indiaink preperation"],
-    "Microscopy": ["UA", "Stool examination", "FOB", "UPT", "Methamphetamine screening test", "Marijuana screening test", "Fern test"],
+    "Microscopy": ["UA", "Blood parasite", "Urine sediment by photo observation", "Stool examination", "FOB", "UPT", "Methamphetamine screening test", "Marijuana screening test", "Fern test"],
     "Blood bank": ["ABO grouping", "Rh grouping"]
 }
 
@@ -131,23 +130,17 @@ with tab1:
     with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
     with col_c2:
-        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS)
+        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Microscopy") if "Microscopy" in DEPARTMENTS else 0)
     with col_c3:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
         test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม") if selected_test == "อื่นๆ (ระบุเอง)" else selected_test
 
-    if test_name == "UA":
-        test_type = "UA Multi-Parameter (10 Sub-tests)"
+    if test_name in ["UA", "Blood parasite"]:
+        test_type = f"{test_name} Multi-Parameter Scoring"
         num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
     else:
-        if department == "Immunology":
-            default_mode_index = 1
-        elif department in ["Biochemistry", "Hematology"]:
-            default_mode_index = 0
-        else:
-            default_mode_index = 1
-        
+        default_mode_index = 1 if department in ["Immunology", "Microscopy", "Microbiology"] else 0
         col_m1, col_m2 = st.columns([2, 1])
         with col_m1:
             test_type = st.radio(
@@ -166,9 +159,108 @@ with tab1:
     st.markdown("---")
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
-    nc_items = []  # เก็บรายการที่ไม่เข้าตามข้อกำหนดเพื่อนำมาแสดงด้านล่าง
+    nc_items = []
 
-    if test_name == "UA":
+    # ==========================================
+    # กรณี 1: Blood parasite (มี 3 รายการย่อย สามารถเพิ่มหลายคำตอบได้)
+    # ==========================================
+    if test_name == "Blood parasite":
+        st.info("💡 **Blood parasite**: กรอกผลตรวจ 3 หัวข้อ (ตระกูล/สายพันธุ์, ระยะที่พบ, %Parasitemia) โดยสามารถเพิ่มแถวคำตอบได้มากกว่า 1 รายการต่อตัวอย่าง ระบบจะรวมคะแนนทุกคำตอบทุก Sample แล้วคำนวณ Standard Score")
+        
+        bp_results = {}
+        total_obtained_all_samples = 0.0
+        total_max_all_samples = 0.0
+
+        for s_idx in range(num_samples):
+            sample_label = f"Sample {s_idx + 1}"
+            st.markdown(f"##### 🩸 **{sample_label}**")
+            
+            init_bp_data = pd.DataFrame([
+                {
+                    "หัวข้อย่อย (Category)": "ตระกูลและสายพันธุ์ (Species)",
+                    "Lab Result": "Plasmodium falciparum",
+                    "Assigned Value": "Plasmodium falciparum",
+                    "คะแนนที่ได้ (Obtained)": 1.0,
+                    "คะแนนเต็ม (Max Score)": 1.0
+                },
+                {
+                    "หัวข้อย่อย (Category)": "ระยะที่พบ (Stage)",
+                    "Lab Result": "Ringtone / Trophozoite",
+                    "Assigned Value": "Ringtone / Trophozoite",
+                    "คะแนนที่ได้ (Obtained)": 1.0,
+                    "คะแนนเต็ม (Max Score)": 1.0
+                },
+                {
+                    "หัวข้อย่อย (Category)": "% Parasitemia",
+                    "Lab Result": "1.5%",
+                    "Assigned Value": "1.5%",
+                    "คะแนนที่ได้ (Obtained)": 1.0,
+                    "คะแนนเต็ม (Max Score)": 1.0
+                }
+            ])
+
+            edited_bp = st.data_editor(
+                init_bp_data,
+                key=f"bp_editor_{s_idx}",
+                num_rows="dynamic",
+                use_container_width=True,
+                column_config={
+                    "หัวข้อย่อย (Category)": st.column_config.SelectboxColumn(
+                        "หัวข้อย่อย", 
+                        options=["ตระกูลและสายพันธุ์ (Species)", "ระยะที่พบ (Stage)", "% Parasitemia"], 
+                        required=True
+                    ),
+                    "Lab Result": st.column_config.TextColumn("Lab Result", required=True),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value", required=True),
+                    "คะแนนที่ได้ (Obtained)": st.column_config.NumberColumn("คะแนนที่ได้", min_value=0.0, format="%.1f"),
+                    "คะแนนเต็ม (Max Score)": st.column_config.NumberColumn("คะแนนเต็ม", min_value=0.1, format="%.1f")
+                }
+            )
+
+            s_obt = edited_bp['คะแนนที่ได้ (Obtained)'].sum()
+            s_max = edited_bp['คะแนนเต็ม (Max Score)'].sum()
+            
+            total_obtained_all_samples += s_obt
+            total_max_all_samples += s_max
+
+            for _, r in edited_bp.iterrows():
+                l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+                obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
+                cat = str(r['หัวข้อย่อย (Category)'])
+                if l_res != a_val or obt_sc < max_sc:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_label} - Blood parasite ({cat})",
+                        "ผลตรวจห้องปฏิบัติการ": l_res,
+                        "ค่าเป้าหมาย (Assigned Value)": a_val,
+                        "สถานะปัญหา": f"Mismatch / คะแนนได้ {obt_sc}/{max_sc}"
+                    })
+
+            bp_results[sample_label] = (edited_bp, s_obt, s_max)
+            st.caption(f"คะแนนเฉพาะ {sample_label}: {s_obt:.1f} / {s_max:.1f}")
+
+        overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
+        overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
+
+        if overall_std_score >= 4.0:
+            eval_status = "Excellent"
+        elif 3.50 <= overall_std_score < 4.0:
+            eval_status = "Good"
+        elif 3.00 <= overall_std_score < 3.50:
+            eval_status = "Satisfactory"
+        else:
+            eval_status = "Unsatisfactory"
+
+        st.markdown("---")
+        st.markdown("#### 🎯 ผลการสรุปคะแนนภาพรวม Blood parasite (รวมทุก Sample)")
+        sc_c1, sc_c2, sc_c3 = st.columns(3)
+        sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
+        sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
+        sc_c3.metric("Scoring Evaluation", eval_status)
+
+    # ==========================================
+    # กรณี 2: UA (10 Sub-parameters)
+    # ==========================================
+    elif test_name == "UA":
         st.info("💡 กรอกผลตรวจ ค่า Assigned Value พร้อมคะแนนที่ได้ และคะแนนเต็มในแต่ละพารามิเตอร์ ระบบจะรวมคะแนนของทุก Sample มารวมกันคำนวณ Standard Score")
         
         ua_results = {}
@@ -210,7 +302,6 @@ with tab1:
             total_obtained_all_samples += sample_obt
             total_max_all_samples += sample_max
             
-            # ตรวจสอบ NC ย่อย (Mismatch หรือ ได้คะแนนไม่เต็ม)
             for _, r in edited_ua.iterrows():
                 l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
                 obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
@@ -390,8 +481,8 @@ with tab1:
             use_container_width=True,
             column_config={
                 "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
-                "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
-                "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True)
+                "Lab Result": st.column_config.TextColumn("Lab Result", required=True) if test_name == "Urine sediment by photo observation" else st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
+                "Assigned Value": st.column_config.TextColumn("Assigned Value", required=True) if test_name == "Urine sediment by photo observation" else st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True)
             }
         )
 
@@ -407,7 +498,7 @@ with tab1:
                 })
 
     # ==========================================
-    # ส่วนทบทวนและวิเคราะห์สาเหตุ (Non-conformity & Root Cause Analysis)
+    # ส่วนทบทวนและวิเคราะห์สาเหตุ (Non-conformity)
     # ==========================================
     st.markdown("---")
     st.subheader("🔍 สรุปรายการที่ไม่เป็นไปตามข้อกำหนด & การทบทวนทางเทคนิค (ISO 15189)")
@@ -423,13 +514,13 @@ with tab1:
     with col_rc1:
         root_cause = st.text_area(
             "📌 สาเหตุที่ไม่ผ่าน / สิ่งที่ไม่เป็นไปตามข้อกำหนด (Root Cause Analysis)", 
-            placeholder="เช่น Human Error, Reagent Deterioration, Calibration Failure, Pipette Out of Tolerance, Sample Storage Condition",
+            placeholder="เช่น Identification Error, Missed Stage, Incorrect %Parasitemia Estimation, Human Error",
             height=120
         )
     with col_rc2:
         review_action = st.text_area(
             "🛠️ ผลการทบทวน / มาตรการแก้ไขและป้องกัน (Corrective & Preventive Action / Management Review)", 
-            placeholder="เช่น Re-calibrate ใหม่, เปลี่ยน น้ำยา Lot ใหม่, ทำ Maintenance เครื่องมือ, จัดอบรมเจ้าหน้าที่ผู้ปฏิบัติงาน",
+            placeholder="เช่น ให้เจ้าหน้าที่สอบทานสไลด์ซ้ำ, จัด Training เรื่อง Blood parasite identification, ทำ Double Check กับภาพถ่ายอ้างอิง",
             height=120
         )
 
@@ -439,7 +530,42 @@ with tab1:
         else:
             new_rows = []
             
-            if test_name == "UA":
+            if test_name == "Blood parasite":
+                for s_label, (sub_df, sub_tot_obt, sub_tot_m) in bp_results.items():
+                    for _, r in sub_df.iterrows():
+                        cat_name = str(r['หัวข้อย่อย (Category)'])
+                        l_val = str(r['Lab Result'])
+                        a_val = str(r['Assigned Value'])
+                        sub_obt = float(r['คะแนนที่ได้ (Obtained)'])
+                        sub_max = float(r['คะแนนเต็ม (Max Score)'])
+                        
+                        new_rows.append({
+                            'Cycle': cycle,
+                            'Department': department,
+                            'Test_Name': f"Blood parasite ({cat_name})",
+                            'Sample_ID': s_label,
+                            'Test_Type': 'Qualitative (Blood parasite Sub-parameter)',
+                            'Lab_Result': l_val,
+                            'Assigned_Value': a_val,
+                            'SD_Group': np.nan,
+                            'Z_Score': np.nan,
+                            'Interpretation': "Match" if l_val == a_val else "Mismatch",
+                            'Lab_SD': np.nan,
+                            'Lab_CV': np.nan,
+                            'TEa_Percent': np.nan,
+                            'Bias_Percent': np.nan,
+                            'Sigma_Metric': np.nan,
+                            'Recommended_Multirule': 'N/A',
+                            'Score_Obtained': sub_obt,
+                            'Max_Score': sub_max,
+                            'Score_Percent': round(overall_score_pct, 2),
+                            'Standard_Score': round(overall_std_score, 2),
+                            'Status': eval_status,
+                            'Root_Cause': root_cause,
+                            'Review_Action': review_action
+                        })
+
+            elif test_name == "UA":
                 for s_label, (sub_df, sub_tot_obt, sub_tot_m) in ua_results.items():
                     for _, r in sub_df.iterrows():
                         p_name = r['พารามิเตอร์ (Parameter)']
@@ -664,7 +790,7 @@ with tab2:
                     scoring_df, x='Test_Name', y='Standard_Score', color='Status',
                     color_discrete_map=COLOR_MAP,
                     hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score', 'Score_Percent'],
-                    title="Standard Score Distribution (UA / Scoring)"
+                    title="Standard Score Distribution (UA / Blood parasite / Scoring)"
                 )
                 fig_score.add_hline(y=4.0, line_dash="dot", line_color="green", annotation_text="Excellent (4.0)")
                 fig_score.add_hline(y=3.5, line_dash="dash", line_color="#2ecc71", annotation_text="Good (3.5)")
