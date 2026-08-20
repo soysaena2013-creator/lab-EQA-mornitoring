@@ -22,17 +22,18 @@ UA_PARAMETERS = [
     "Protein", "Glucose", "Ketone", "Urobilinogen", "Bilirubin", "Blood"
 ]
 
+# ปรับปรุง Options สำหรับ UA ตามที่กำหนด
 UA_OPTIONS = {
-    "Specific Gravity": ["1.000", "1.005", "1.010", "1.015", "1.020", "1.025", "1.030"],
-    "pH": ["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5"],
-    "Leukocytes": ["Negative", "Trace", "1+", "2+", "3+"],
-    "Nitrite": ["Negative", "Positive"],
+    "Specific Gravity": ["1.000", "1.005", "1.010", "1.015", "1.020", "1.025", "1.030", "1.035"],
+    "pH": ["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0"],
+    "Leukocytes": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Nitrite": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
     "Protein": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
     "Glucose": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
     "Ketone": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Urobilinogen": ["Normal (0.2)", "1.0", "2.0", "4.0", "8.0"],
-    "Bilirubin": ["Negative", "1+", "2+", "3+"],
-    "Blood": ["Negative", "Trace", "1+", "2+", "3+"]
+    "Urobilinogen": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Bilirubin": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Blood": ["Negative", "Trace", "1+", "2+", "3+", "4+"]
 }
 
 @st.cache_data
@@ -44,7 +45,7 @@ def load_data():
             'Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Test_Type',
             'Lab_Result', 'Assigned_Value', 'SD_Group', 'Z_Score', 'Interpretation',
             'Lab_SD', 'Lab_CV', 'TEa_Percent', 'Bias_Percent', 'Sigma_Metric', 'Recommended_Multirule',
-            'Score_Obtained', 'Max_Score', 'Score_Percent', 'Status', 'Remark'
+            'Score_Obtained', 'Max_Score', 'Score_Percent', 'Standard_Score', 'Status', 'Remark'
         ])
 
 def save_data(df):
@@ -164,7 +165,7 @@ with tab1:
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     if test_name == "UA":
-        st.info("💡 กรอกผลการตรวจทั้ง 10 พารามิเตอร์ย่อยของ Urinalysis ระบบจะทำการประเมินความสอดคล้อง (Concordance) และคิดคะแนนภาพรวมให้ทันที")
+        st.info("💡 กรอกผลตรวจ 10 พารามิเตอร์ย่อย (ข้อละ 1 คะแนน) ระบบจะคำนวณ Standard Score = (คะแนนรวม * 4.0) / คะแนนเต็ม และประเมิน Scoring Evaluation ให้ทันที")
         
         ua_results = {}
         for s_idx in range(num_samples):
@@ -187,11 +188,33 @@ with tab1:
                 use_container_width=True,
                 column_config={
                     "พารามิเตอร์ (Parameter)": st.column_config.TextColumn("พารามิเตอร์", disabled=True),
-                    "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=["(ผสมตัวเลือก)"] + list(set(sum(UA_OPTIONS.values(), []))), required=True),
-                    "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=["(ผสมตัวเลือก)"] + list(set(sum(UA_OPTIONS.values(), []))), required=True)
+                    "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=list(set(sum(UA_OPTIONS.values(), []))), required=True),
+                    "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=list(set(sum(UA_OPTIONS.values(), []))), required=True)
                 }
             )
-            ua_results[sample_label] = edited_ua
+            
+            # คำนวณ Standard Score สรุปเบื้องต้นแสดงผลแบบ Real-time
+            tot_obtained = sum(1.0 for _, r in edited_ua.iterrows() if str(r['Lab Result']).strip() == str(r['Assigned Value']).strip())
+            tot_max = float(len(edited_ua))
+            std_score = (tot_obtained * 4.0) / tot_max if tot_max > 0 else 0.0
+            score_pct = (tot_obtained / tot_max * 100.0) if tot_max > 0 else 0.0
+            
+            if std_score >= 3.5:
+                eval_status = "Excellent"
+            elif std_score >= 3.0:
+                eval_status = "Good"
+            elif std_score >= 2.0:
+                eval_status = "Satisfactory"
+            else:
+                eval_status = "Unacceptable"
+
+            sc_c1, sc_c2, sc_c3 = st.columns(3)
+            sc_c1.metric(f"คะแนนรวม ({sample_label})", f"{tot_obtained:.0f} / {tot_max:.0f}")
+            sc_c2.metric("Standard Score (เต็ม 4.0)", f"{std_score:.2f}")
+            sc_c3.metric("Scoring Evaluation", eval_status)
+            st.markdown("---")
+            
+            ua_results[sample_label] = (edited_ua, tot_obtained, tot_max, std_score, score_pct, eval_status)
 
     elif "Quantitative" in test_type:
         st.info("💡 กรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ระบบจะคำนวณ Z-score, Sigma Metric และแนะนำ Westgard Multirule ให้ทันที")
@@ -332,16 +355,12 @@ with tab1:
             new_rows = []
             
             if test_name == "UA":
-                for s_label, sub_df in ua_results.items():
-                    matched = sum(1 for _, r in sub_df.iterrows() if str(r['Lab Result']).strip() == str(r['Assigned Value']).strip())
-                    total_p = len(sub_df)
-                    ua_pct = (matched / total_p) * 100.0
-                    ua_status = "Excellent" if ua_pct == 100.0 else ("Good" if ua_pct >= 80.0 else ("Satisfactory" if ua_pct >= 70.0 else "Unacceptable"))
-                    
+                for s_label, (sub_df, tot_obt, tot_m, std_sc, sc_pct, eval_stat) in ua_results.items():
                     for _, r in sub_df.iterrows():
                         p_name = r['พารามิเตอร์ (Parameter)']
                         l_val = str(r['Lab Result'])
                         a_val = str(r['Assigned Value'])
+                        sub_score = 1.0 if l_val == a_val else 0.0
                         
                         new_rows.append({
                             'Cycle': cycle,
@@ -360,10 +379,11 @@ with tab1:
                             'Bias_Percent': np.nan,
                             'Sigma_Metric': np.nan,
                             'Recommended_Multirule': 'N/A',
-                            'Score_Obtained': 1.0 if l_val == a_val else 0.0,
+                            'Score_Obtained': sub_score,
                             'Max_Score': 1.0,
-                            'Score_Percent': round(ua_pct, 2),
-                            'Status': ua_status,
+                            'Score_Percent': round(sc_pct, 2),
+                            'Standard_Score': round(std_sc, 2),
+                            'Status': eval_stat,
                             'Remark': remark
                         })
 
@@ -403,6 +423,7 @@ with tab1:
                         'Score_Obtained': np.nan,
                         'Max_Score': np.nan,
                         'Score_Percent': np.nan,
+                        'Standard_Score': np.nan,
                         'Status': interp,
                         'Remark': remark
                     })
@@ -448,6 +469,7 @@ with tab1:
                         'Score_Obtained': score_obtained,
                         'Max_Score': max_score,
                         'Score_Percent': round(overall_pct, 2),
+                        'Standard_Score': np.nan,
                         'Status': overall_status,
                         'Remark': remark
                     })
@@ -479,6 +501,7 @@ with tab1:
                         'Score_Obtained': np.nan,
                         'Max_Score': np.nan,
                         'Score_Percent': 100.0 if status == "Excellent" else 0.0,
+                        'Standard_Score': np.nan,
                         'Status': status,
                         'Remark': remark
                     })
@@ -514,7 +537,7 @@ with tab2:
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("จำนวนรายการย่อยทั้งหมด", f"{total_tests} รายการ")
         m2.metric("ผ่านเกณฑ์ภาพรวม", f"{passed_cnt}", f"{pass_rate:.1f}%")
-        m3.metric("Excellent (100%)", f"{excellent_cnt}")
+        m3.metric("Excellent", f"{excellent_cnt}")
         m4.metric("Good / Satisfactory", f"{good_cnt + sat_cnt}")
         m5.metric("Unacceptable / Error", f"{unacc_cnt}")
 
@@ -531,7 +554,7 @@ with tab2:
             st.plotly_chart(fig_bar, use_container_width=True)
 
         with col_g2:
-            st.subheader("แนวโน้ม Z-Score / คะแนน % ภาพรวม")
+            st.subheader("แนวโน้ม Z-Score / Standard Score / คะแนน % ภาพรวม")
             quant_df = filtered_df[filtered_df['Test_Type'] == 'Quantitative'].dropna(subset=['Z_Score'])
             scoring_df = filtered_df[filtered_df['Score_Percent'].notnull()]
 
@@ -550,7 +573,7 @@ with tab2:
                 fig_score = px.bar(
                     scoring_df, x='Test_Name', y='Score_Percent', color='Status',
                     color_discrete_map=COLOR_MAP,
-                    hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score'],
+                    hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score', 'Standard_Score'],
                     title="คะแนนประเมินร้อยละภาพรวม (%) - Qualitative / Scoring / UA"
                 )
                 fig_score.add_hline(y=100.0, line_dash="dot", line_color="green", annotation_text="Excellent (100%)")
