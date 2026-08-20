@@ -303,14 +303,14 @@ with tab1:
                         "สถานะปัญหา": f"Performance: {perf}"
                     })
 
-            # ส่วนที่ 2.2 RBC morphology (ไม่มีคอลัมน์ Score ในตาราง, ใช้ช่องกรอกคะแนนรวมด้านล่าง)
-            st.markdown("**2.2 RBC morphology**")
+            # ส่วนที่ 2.2 RBC morphology (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเองด้านล่าง)
+            st.markdown("**2.2 RBC morphology** (กรอก 'seen' หรือเว้นว่างหากไม่พบ)")
             p22_data = []
             for param in CBC_SLIDE_RBC_PARAMS:
                 p22_data.append({
                     "Parameter": param,
-                    "Lab Result": "Normal",
-                    "Assigned Value": "Normal"
+                    "Lab Result": "",
+                    "Assigned Value": ""
                 })
             df_p22 = pd.DataFrame(p22_data)
             
@@ -320,8 +320,8 @@ with tab1:
                 use_container_width=True,
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.TextColumn("Lab Result"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
+                    "Lab Result": st.column_config.TextColumn("Lab Result (พิมพ์ 'seen' หรือเว้นว่าง)"),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value (พิมพ์ 'seen' หรือเว้นว่าง)")
                 }
             )
             
@@ -342,14 +342,14 @@ with tab1:
                     'Performance': p22_perf
                 })
 
-            # ส่วนที่ 2.3 Platelet estimation (ไม่มีคอลัมน์ Score ในตาราง, ใช้ช่องกรอกคะแนนรวมด้านล่าง)
-            st.markdown("**2.3 Platelet estimation**")
+            # ส่วนที่ 2.3 Platelet estimation (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเองด้านล่าง)
+            st.markdown("**2.3 Platelet estimation** (กรอก 'seen' หรือเว้นว่างหากไม่พบ)")
             p23_data = []
             for param in CBC_SLIDE_PLT_PARAMS:
                 p23_data.append({
                     "Parameter": param,
-                    "Lab Result": "adequate",
-                    "Assigned Value": "adequate"
+                    "Lab Result": "",
+                    "Assigned Value": ""
                 })
             df_p23 = pd.DataFrame(p23_data)
             
@@ -359,8 +359,8 @@ with tab1:
                 use_container_width=True,
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.TextColumn("Lab Result"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
+                    "Lab Result": st.column_config.TextColumn("Lab Result (พิมพ์ 'seen' หรือเว้นว่าง)"),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value (พิมพ์ 'seen' หรือเว้นว่าง)")
                 }
             )
             
