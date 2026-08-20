@@ -77,6 +77,15 @@ QUAL_OPTIONS = {
     "serology": ["Reactive", "Non-reactive", "Positive", "Negative", "Equivocal", "Inconclusive"],
     "pos_neg": ["Positive", "Negative", "Inconclusive"],
     "stain": ["Found", "Not Found", "Yeasts Found", "No Organism Found"],
+    "koh": [
+        "Not Found / No fungal element seen",
+        "Yeast cells found",
+        "Yeast cells with pseudohyphae found",
+        "Septate hyphae found",
+        "Non-septate / Aseptate hyphae found",
+        "Arthrospores / Arthroconidia found",
+        "Budding yeast cells found"
+    ],
     "titer": ["1:2", "1:4", "1:8", "1:16", "1:32", "1:64", "1:128", "1:256", "Negative"],
     "general": ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal", "Inconclusive", "Normal", "Abnormal"]
 }
@@ -118,7 +127,9 @@ def get_qual_options_for_test(test_name):
         return QUAL_OPTIONS["serology"]
     elif test_name in ["melioid titer"]:
         return QUAL_OPTIONS["titer"]
-    elif test_name in ["AFB", "KOH", "Indiaink preperation"]:
+    elif test_name == "KOH":
+        return QUAL_OPTIONS["koh"]
+    elif test_name in ["AFB", "Indiaink preperation"]:
         return QUAL_OPTIONS["stain"]
     elif test_name in ["UPT", "FOB", "COVID-19 TEST", "Dengue NS1", "Methamphetamine screening test", "Marijuana screening test"]:
         return QUAL_OPTIONS["pos_neg"]
