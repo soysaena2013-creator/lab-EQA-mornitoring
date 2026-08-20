@@ -26,9 +26,6 @@ df = load_data()
 if 'Sample_ID' not in df.columns:
     df['Sample_ID'] = "Sample 1"
 
-# ----------------------------------------------------
-# Master Data Configuration
-# ----------------------------------------------------
 DEPARTMENTS = [
     "Hematology",
     "Biochemistry",
@@ -75,9 +72,6 @@ st.markdown("---")
 
 tab1, tab2, tab3 = st.tabs(["📝 กรอกผล EQA (Multi-Sample)", "📊 Dashboard สรุปผล", "📋 ประวัติและ Export ข้อมูล"])
 
-# ====================================================
-# TAB 1: MULTI-SAMPLE DATA ENTRY FORM
-# ====================================================
 with tab1:
     st.header("แบบฟอร์มบันทึกผล EQA (รองรับหลาย Sample ต่อรอบ)")
     
@@ -108,7 +102,7 @@ with tab1:
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     if "Quantitative" in test_type:
-        st.info("💡 กรอกรหัสตัวอย่าง, ผลของแล็บ, ค่า Assigned Value และค่า SD ในตารางด้านล่าง ระบบจะคำนวณ SDI และประเมินสถานะให้อัตโนมัติ")
+        st.info("💡 ท่านสามารถดับเบิ้ลคลิกเพื่อแก้ไข **รหัสตัวอย่าง (Sample ID)**, ผลตรวจ, ค่า Assigned Value และ SD ในตารางได้ตามต้องการ")
         
         init_data = pd.DataFrame({
             'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
@@ -122,14 +116,15 @@ with tab1:
             num_rows="dynamic", 
             use_container_width=True,
             column_config={
-                "Lab Result": st.column_config.NumberColumn(format="%.2f"),
-                "Assigned Value": st.column_config.NumberColumn(format="%.2f"),
-                "SD": st.column_config.NumberColumn(format="%.2f", min_value=0.01)
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
+                "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
+                "Assigned Value": st.column_config.NumberColumn("Assigned Value", format="%.2f"),
+                "SD": st.column_config.NumberColumn("SD", format="%.2f", min_value=0.01)
             }
         )
 
     else:
-        st.info("💡 เลือกตัวอย่างผลตรวจเชิงคุณภาพจากรายการ Dropdown ในตาราง")
+        st.info("💡 ท่านสามารถดับเบิ้ลคลิกเพื่อแก้ไข **รหัสตัวอย่าง (Sample ID)** และเลือกผลตรวจเชิงคุณภาพในตารางได้ตามต้องการ")
         qual_opts = get_qual_options_for_test(test_name)
         
         init_data = pd.DataFrame({
@@ -143,6 +138,7 @@ with tab1:
             num_rows="dynamic",
             use_container_width=True,
             column_config={
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
                 "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
                 "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True)
             }
@@ -214,9 +210,6 @@ with tab1:
             st.success(f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} ตัวอย่าง เรียบร้อยแล้ว!")
             st.rerun()
 
-# ====================================================
-# TAB 2: DASHBOARD ANALYTICS
-# ====================================================
 with tab2:
     st.header("Dashboard สรุปผลและวิเคราะห์ประสิทธิภาพ")
     if not df.empty:
@@ -274,9 +267,6 @@ with tab2:
     else:
         st.info("ยังไม่มีข้อมูลในระบบ")
 
-# ====================================================
-# TAB 3: DATA TABLE & EXPORT
-# ====================================================
 with tab3:
     st.header("ตารางข้อมูลทั้งหมด")
     st.dataframe(df, use_container_width=True)
