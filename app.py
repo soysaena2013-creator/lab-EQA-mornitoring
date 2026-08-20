@@ -60,8 +60,8 @@ COLOR_MAP = {
     'Good': '#2ecc71',          # เขียวสว่าง
     'Satisfactory': '#f1c40f',  # เหลือง
     'Unacceptable': '#e74c3c',  # แดง
-    'Acceptable': '#2ecc71',    # สำหรับข้อมูลเดิม ย้อนหลัง
-    'Warning': '#f39c12'        # สำหรับข้อมูลเดิม ย้อนหลัง
+    'Acceptable': '#2ecc71',    # รองรับข้อมูลเดิม
+    'Warning': '#f39c12'        # รองรับข้อมูลเดิม
 }
 
 def get_qual_options_for_test(test_name):
@@ -109,7 +109,7 @@ with tab1:
             "โหมดการประเมินผล", 
             [
                 "Quantitative (เชิงปริมาณ - SDI)", 
-                "Qualitative with Scoring (ประเมินด้วยคะแนน & %)", 
+                "Qualitative with Scoring (ประเมินด้วยคะแนน & % ภาพรวม)", 
                 "Qualitative Basic (เทียบ Concordance ตรงๆ)"
             ], 
             index=default_mode_index,
@@ -144,7 +144,7 @@ with tab1:
         )
 
     elif "Scoring" in test_type:
-        st.info("💡 กรอกคะแนนที่ได้และคะแนนเต็ม ระบบจะตัดเกณฑ์: 100% = Excellent | 80-99% = Good | 70-79% = Satisfactory | <70% = Unacceptable")
+        st.info("💡 ระบบจะนำคะแนนรวมของทุก Sample หารด้วยคะแนนเต็มรวมทั้งหมด เพื่อคำนวณ % ภาพรวม (100% = Excellent | 80-99.9% = Good | 70-79.9% = Satisfactory | <70% = Unacceptable)")
         qual_opts = get_qual_options_for_test(test_name)
         
         init_data = pd.DataFrame({
@@ -196,6 +196,22 @@ with tab1:
             st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
         else:
             new_rows = []
+            
+            # คำนวณร้อยละภาพรวมก่อนสำหรับกรณี Scoring
+            if "Scoring" in test_type:
+                total_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
+                total_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
+                overall_pct = (total_obtained / total_max * 100) if total_max > 0 else 0.0
+                
+                if overall_pct == 100.0:
+                    overall_status = "Excellent"
+                elif 80.0 <= overall_pct < 100.0:
+                    overall_status = "Good"
+                elif 70.0 <= overall_pct < 80.0:
+                    overall_status = "Satisfactory"
+                else:
+                    overall_status = "Unacceptable"
+
             for _, row in edited_df.iterrows():
                 sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
                 
@@ -240,17 +256,6 @@ with tab1:
                     score_obtained = float(row['คะแนนที่ได้ (Obtained)'])
                     max_score = float(row['คะแนนเต็ม (Max Score)'])
                     
-                    score_pct = (score_obtained / max_score * 100) if max_score > 0 else 0.0
-                    
-                    if score_pct == 100.0:
-                        status = "Excellent"
-                    elif 80.0 <= score_pct < 100.0:
-                        status = "Good"
-                    elif 70.0 <= score_pct < 80.0:
-                        status = "Satisfactory"
-                    else:
-                        status = "Unacceptable"
-                        
                     new_rows.append({
                         'Cycle': cycle,
                         'Department': department,
@@ -261,10 +266,10 @@ with tab1:
                         'Assigned_Value': assigned_val_str,
                         'Score_Obtained': score_obtained,
                         'Max_Score': max_score,
-                        'Score_Percent': round(score_pct, 2),
+                        'Score_Percent': round(overall_pct, 2), # คิดร้อยละจากคะแนนรวมทุก sample
                         'SD': np.nan,
                         'SDI': np.nan,
-                        'Status': status,
+                        'Status': overall_status,
                         'Remark': remark
                     })
 
@@ -293,7 +298,7 @@ with tab1:
             df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
             save_data(df)
             st.cache_data.clear()
-            st.success(f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} ตัวอย่าง เรียบร้อยแล้ว!")
+            st.success(f"บันทึกข้อมูล '{test_name}' เรียบร้อยแล้ว! คะแนนภาพรวม: {overall_pct:.2f}% ({overall_status})" if "Scoring" in test_type else f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} ตัวอย่าง เรียบร้อยแล้ว!")
             st.rerun()
 
 with tab2:
@@ -314,7 +319,6 @@ with tab2:
         sat_cnt = len(filtered_df[filtered_df['Status'] == 'Satisfactory'])
         unacc_cnt = len(filtered_df[filtered_df['Status'] == 'Unacceptable'])
         
-        # รวมสถานะที่ถือว่า "ผ่านเกณฑ์" ทั้งหมด
         acc_legacy_cnt = len(filtered_df[filtered_df['Status'] == 'Acceptable'])
         passed_cnt = excellent_cnt + good_cnt + sat_cnt + acc_legacy_cnt
         pass_rate = (passed_cnt / total_tests * 100) if total_tests > 0 else 0.0
@@ -339,7 +343,7 @@ with tab2:
             st.plotly_chart(fig_bar, use_container_width=True)
 
         with col_g2:
-            st.subheader("แนวโน้ม SDI / คะแนน % (แยกตามโหมด)")
+            st.subheader("แนวโน้ม SDI / คะแนน % ภาพรวม")
             quant_df = filtered_df[filtered_df['Test_Type'] == 'Quantitative'].dropna(subset=['SDI'])
             scoring_df = filtered_df[filtered_df['Score_Percent'].notnull()]
 
@@ -356,10 +360,10 @@ with tab2:
             
             if not scoring_df.empty:
                 fig_score = px.bar(
-                    scoring_df, x='Sample_ID', y='Score_Percent', color='Status', hover_name='Test_Name',
+                    scoring_df, x='Test_Name', y='Score_Percent', color='Status',
                     color_discrete_map=COLOR_MAP,
-                    hover_data=['Cycle', 'Department', 'Test_Name', 'Score_Obtained', 'Max_Score'],
-                    title="คะแนนประเมินร้อยละ (%) - Qualitative / Scoring"
+                    hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score'],
+                    title="คะแนนประเมินร้อยละภาพรวม (%) - Qualitative / Scoring"
                 )
                 fig_score.add_hline(y=100.0, line_dash="dot", line_color="green", annotation_text="Excellent (100%)")
                 fig_score.add_hline(y=80.0, line_dash="dash", line_color="#2ecc71", annotation_text="Good (80%)")
