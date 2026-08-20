@@ -16,6 +16,25 @@ TEA_TABLE = {
     "K": 0.5, "Cl": 5.0, "Hba1c": 6.0, "DEFAULT": 10.0
 }
 
+# พารามิเตอร์ย่อยสำหรับ UA 10 รายการ
+UA_PARAMETERS = [
+    "Specific Gravity", "pH", "Leukocytes", "Nitrite", 
+    "Protein", "Glucose", "Ketone", "Urobilinogen", "Bilirubin", "Blood"
+]
+
+UA_OPTIONS = {
+    "Specific Gravity": ["1.000", "1.005", "1.010", "1.015", "1.020", "1.025", "1.030"],
+    "pH": ["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5"],
+    "Leukocytes": ["Negative", "Trace", "1+", "2+", "3+"],
+    "Nitrite": ["Negative", "Positive"],
+    "Protein": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Glucose": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Ketone": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Urobilinogen": ["Normal (0.2)", "1.0", "2.0", "4.0", "8.0"],
+    "Bilirubin": ["Negative", "1+", "2+", "3+"],
+    "Blood": ["Negative", "Trace", "1+", "2+", "3+"]
+}
+
 @st.cache_data
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -51,7 +70,6 @@ TEST_LISTS = {
     "Blood bank": ["ABO grouping", "Rh grouping"]
 }
 
-# ปรับเพิ่มตัวเลือกใน Serology ให้ครอบคลุม Reactive, Non-reactive, Positive, Negative, Equivocal, Inconclusive
 QUAL_OPTIONS = {
     "blood_bank": ["Group A", "Group B", "Group AB", "Group O", "Positive", "Negative"],
     "serology": ["Reactive", "Non-reactive", "Positive", "Negative", "Equivocal", "Inconclusive"],
@@ -116,34 +134,67 @@ with tab1:
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
         test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม") if selected_test == "อื่นๆ (ระบุเอง)" else selected_test
 
-    if department == "Immunology":
-        default_mode_index = 1
-    elif department in ["Biochemistry", "Hematology"]:
-        default_mode_index = 0
+    if test_name == "UA":
+        test_type = "UA Multi-Parameter (10 Sub-tests)"
+        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
     else:
-        default_mode_index = 1
-    
-    col_m1, col_m2 = st.columns([2, 1])
-    with col_m1:
-        test_type = st.radio(
-            "โหมดการประเมินผล", 
-            [
-                "Quantitative (เชิงปริมาณ + Z-score & Sigma Metric)", 
-                "Qualitative with Scoring (ประเมินด้วยคะแนน & % ภาพรวม)", 
-                "Qualitative Basic (เทียบ Concordance ตรงๆ)"
-            ], 
-            index=default_mode_index,
-            horizontal=True
-        )
-    with col_m2:
-        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=2, step=1)
+        if department == "Immunology":
+            default_mode_index = 1
+        elif department in ["Biochemistry", "Hematology"]:
+            default_mode_index = 0
+        else:
+            default_mode_index = 1
+        
+        col_m1, col_m2 = st.columns([2, 1])
+        with col_m1:
+            test_type = st.radio(
+                "โหมดการประเมินผล", 
+                [
+                    "Quantitative (เชิงปริมาณ + Z-score & Sigma Metric)", 
+                    "Qualitative with Scoring (ประเมินด้วยคะแนน & % ภาพรวม)", 
+                    "Qualitative Basic (เทียบ Concordance ตรงๆ)"
+                ], 
+                index=default_mode_index,
+                horizontal=True
+            )
+        with col_m2:
+            num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=2, step=1)
 
     st.markdown("---")
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
-    if "Quantitative" in test_type:
-        st.info("💡 กรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ระบบจะคำนวณ Z-score, Sigma Metric และแนะนำ Westgard Multirule ให้ทันที")
+    if test_name == "UA":
+        st.info("💡 กรอกผลการตรวจทั้ง 10 พารามิเตอร์ย่อยของ Urinalysis ระบบจะทำการประเมินความสอดคล้อง (Concordance) และคิดคะแนนภาพรวมให้ทันที")
         
+        ua_results = {}
+        for s_idx in range(num_samples):
+            sample_label = f"Sample {s_idx + 1}"
+            st.markdown(f"##### 🧪 **{sample_label}**")
+            
+            ua_data = []
+            for param in UA_PARAMETERS:
+                opts = UA_OPTIONS[param]
+                ua_data.append({
+                    "พารามิเตอร์ (Parameter)": param,
+                    "Lab Result": opts[0],
+                    "Assigned Value": opts[0]
+                })
+            
+            ua_df = pd.DataFrame(ua_data)
+            edited_ua = st.data_editor(
+                ua_df,
+                key=f"ua_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "พารามิเตอร์ (Parameter)": st.column_config.TextColumn("พารามิเตอร์", disabled=True),
+                    "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=["(ผสมตัวเลือก)"] + list(set(sum(UA_OPTIONS.values(), []))), required=True),
+                    "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=["(ผสมตัวเลือก)"] + list(set(sum(UA_OPTIONS.values(), []))), required=True)
+                }
+            )
+            ua_results[sample_label] = edited_ua
+
+    elif "Quantitative" in test_type:
+        st.info("💡 กรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ระบบจะคำนวณ Z-score, Sigma Metric และแนะนำ Westgard Multirule ให้ทันที")
         default_tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
         
         init_data = pd.DataFrame({
@@ -280,24 +331,45 @@ with tab1:
         else:
             new_rows = []
             
-            if "Scoring" in test_type:
-                total_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
-                total_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
-                overall_pct = (total_obtained / total_max * 100) if total_max > 0 else 0.0
-                
-                if overall_pct == 100.0:
-                    overall_status = "Excellent"
-                elif 80.0 <= overall_pct < 100.0:
-                    overall_status = "Good"
-                elif 70.0 <= overall_pct < 80.0:
-                    overall_status = "Satisfactory"
-                else:
-                    overall_status = "Unacceptable"
+            if test_name == "UA":
+                for s_label, sub_df in ua_results.items():
+                    matched = sum(1 for _, r in sub_df.iterrows() if str(r['Lab Result']).strip() == str(r['Assigned Value']).strip())
+                    total_p = len(sub_df)
+                    ua_pct = (matched / total_p) * 100.0
+                    ua_status = "Excellent" if ua_pct == 100.0 else ("Good" if ua_pct >= 80.0 else ("Satisfactory" if ua_pct >= 70.0 else "Unacceptable"))
+                    
+                    for _, r in sub_df.iterrows():
+                        p_name = r['พารามิเตอร์ (Parameter)']
+                        l_val = str(r['Lab Result'])
+                        a_val = str(r['Assigned Value'])
+                        
+                        new_rows.append({
+                            'Cycle': cycle,
+                            'Department': department,
+                            'Test_Name': f"UA ({p_name})",
+                            'Sample_ID': s_label,
+                            'Test_Type': 'Qualitative (UA Sub-parameter)',
+                            'Lab_Result': l_val,
+                            'Assigned_Value': a_val,
+                            'SD_Group': np.nan,
+                            'Z_Score': np.nan,
+                            'Interpretation': "Match" if l_val == a_val else "Mismatch",
+                            'Lab_SD': np.nan,
+                            'Lab_CV': np.nan,
+                            'TEa_Percent': np.nan,
+                            'Bias_Percent': np.nan,
+                            'Sigma_Metric': np.nan,
+                            'Recommended_Multirule': 'N/A',
+                            'Score_Obtained': 1.0 if l_val == a_val else 0.0,
+                            'Max_Score': 1.0,
+                            'Score_Percent': round(ua_pct, 2),
+                            'Status': ua_status,
+                            'Remark': remark
+                        })
 
-            for _, row in edited_df.iterrows():
-                sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
-                
-                if "Quantitative" in test_type:
+            elif "Quantitative" in test_type:
+                for _, row in edited_df.iterrows():
+                    sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
                     l_res = float(row['Lab Result'])
                     a_val = float(row['Assigned Value'])
                     sd_grp = float(row['SD Group'])
@@ -335,7 +407,22 @@ with tab1:
                         'Remark': remark
                     })
 
-                elif "Scoring" in test_type:
+            elif "Scoring" in test_type:
+                total_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
+                total_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
+                overall_pct = (total_obtained / total_max * 100) if total_max > 0 else 0.0
+                
+                if overall_pct == 100.0:
+                    overall_status = "Excellent"
+                elif 80.0 <= overall_pct < 100.0:
+                    overall_status = "Good"
+                elif 70.0 <= overall_pct < 80.0:
+                    overall_status = "Satisfactory"
+                else:
+                    overall_status = "Unacceptable"
+
+                for _, row in edited_df.iterrows():
+                    sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
                     lab_res_str = str(row['Lab Result'])
                     assigned_val_str = str(row['Assigned Value'])
                     score_obtained = float(row['คะแนนที่ได้ (Obtained)'])
@@ -365,7 +452,9 @@ with tab1:
                         'Remark': remark
                     })
 
-                else:
+            else:
+                for _, row in edited_df.iterrows():
+                    sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
                     lab_res_str = str(row['Lab Result'])
                     assigned_val_str = str(row['Assigned Value'])
                     status = "Excellent" if lab_res_str == assigned_val_str else "Unacceptable"
@@ -397,7 +486,7 @@ with tab1:
             df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
             save_data(df)
             st.cache_data.clear()
-            st.success(f"บันทึกข้อมูล '{test_name}' เรียบร้อยแล้ว! คะแนนภาพรวม: {overall_pct:.2f}% ({overall_status})" if "Scoring" in test_type else f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} ตัวอย่าง เรียบร้อยแล้ว!")
+            st.success(f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} รายการเรียบร้อยแล้ว!")
             st.rerun()
 
 with tab2:
@@ -423,7 +512,7 @@ with tab2:
         pass_rate = (passed_cnt / total_tests * 100) if total_tests > 0 else 0.0
 
         m1, m2, m3, m4, m5 = st.columns(5)
-        m1.metric("จำนวนตัวอย่างทั้งหมด", f"{total_tests} ตัวอย่าง")
+        m1.metric("จำนวนรายการย่อยทั้งหมด", f"{total_tests} รายการ")
         m2.metric("ผ่านเกณฑ์ภาพรวม", f"{passed_cnt}", f"{pass_rate:.1f}%")
         m3.metric("Excellent (100%)", f"{excellent_cnt}")
         m4.metric("Good / Satisfactory", f"{good_cnt + sat_cnt}")
@@ -462,7 +551,7 @@ with tab2:
                     scoring_df, x='Test_Name', y='Score_Percent', color='Status',
                     color_discrete_map=COLOR_MAP,
                     hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score'],
-                    title="คะแนนประเมินร้อยละภาพรวม (%) - Qualitative / Scoring"
+                    title="คะแนนประเมินร้อยละภาพรวม (%) - Qualitative / Scoring / UA"
                 )
                 fig_score.add_hline(y=100.0, line_dash="dot", line_color="green", annotation_text="Excellent (100%)")
                 fig_score.add_hline(y=80.0, line_dash="dash", line_color="#2ecc71", annotation_text="Good (80%)")
