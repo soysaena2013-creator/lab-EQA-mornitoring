@@ -50,24 +50,6 @@ STAGE_OPTIONS = [
     "Ring form", "Trophozoite", "Schizont", "Gametocyte", "Cyst", "Trophozoite (Ameba)", "Egg / Ovum", "Larva", "Adult worm", "Not Found"
 ]
 
-@st.cache_data
-def load_data():
-    if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
-    else:
-        return pd.DataFrame(columns=[
-            'Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Test_Type',
-            'Lab_Result', 'Assigned_Value', 'SD_Group', 'Z_Score', 'Interpretation',
-            'Lab_SD', 'Lab_CV', 'TEa_Percent', 'Bias_Percent', 'Sigma_Metric', 'Recommended_Multirule',
-            'Score_Obtained', 'Max_Score', 'Score_Percent', 'Standard_Score', 'Status', 
-            'Root_Cause', 'Review_Action'
-        ])
-
-def save_data(df):
-    df.to_csv(DATA_FILE, index=False)
-
-df = load_data()
-
 DEPARTMENTS = [
     "Immunology",
     "Hematology",
@@ -105,6 +87,26 @@ COLOR_MAP = {
     'Warning': '#f39c12'
 }
 
+# ---------------------------------------------------------
+# Helper Functions
+# ---------------------------------------------------------
+@st.cache_data
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    else:
+        return pd.DataFrame(columns=[
+            'Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Test_Type',
+            'Lab_Result', 'Assigned_Value', 'SD_Group', 'Z_Score', 'Interpretation',
+            'Lab_SD', 'Lab_CV', 'TEa_Percent', 'Bias_Percent', 'Sigma_Metric', 'Recommended_Multirule',
+            'Score_Obtained', 'Max_Score', 'Score_Percent', 'Standard_Score', 'Status', 
+            'Root_Cause', 'Review_Action'
+        ])
+
+def save_data(df):
+    df.to_csv(DATA_FILE, index=False)
+    st.cache_data.clear()
+
 def get_qual_options_for_test(test_name):
     if test_name in ["ABO grouping", "Rh grouping"]:
         return QUAL_OPTIONS["blood_bank"]
@@ -133,11 +135,19 @@ def evaluate_westgard_rules(sigma):
     else:
         return "Unacceptable (<3.0) - ต้องแก้ไข Root Cause / Re-calibrate ก่อนเลือก Rule"
 
+# ---------------------------------------------------------
+# Main Application Layout
+# ---------------------------------------------------------
+df = load_data()
+
 st.title("🔬 ระบบติดตามและประเมินผลประสิทธิภาพ EQA & Sigma Metric")
 st.markdown("---")
 
 tab1, tab2, tab3 = st.tabs(["📝 กรอกผล EQA (Multi-Sample)", "📊 Dashboard สรุปผล & Multirules", "📋 ประวัติและ Export ข้อมูล"])
 
+# =========================================================
+# TAB 1: กรอกผล EQA (Multi-Sample)
+# =========================================================
 with tab1:
     st.header("แบบฟอร์มบันทึกผล EQA")
     
@@ -177,9 +187,7 @@ with tab1:
 
     nc_items = []
 
-    # ==========================================
-    # กรณี 1: Blood parasite, Blood parasite (digital slide), และ Stool examination
-    # ==========================================
+    # 1. กรณี Blood parasite & Stool examination
     if test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
         st.info(f"💡 **{test_name}**: หัวข้อย่อยถูกล็อกไว้ตามมาตรฐาน — ท่านสามารถเลือก/พิมพ์คำตอบได้มากกว่า 1 รายการ (Multi-select) ในช่อง Lab Result และ Assigned Value โดยไม่ต้องกดเพิ่มบรรทัดใหม่")
         
@@ -191,7 +199,6 @@ with tab1:
             st.markdown(f"##### 🔬 **ตัวอย่างที่ {s_idx + 1}**")
             sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"bp_sid_key_{s_idx}")
             
-            # กำหนดหัวข้อย่อยตามประเภทการตรวจ
             categories = ["ตระกูลและสายพันธุ์ (Species)", "ระยะที่พบ (Stage)"]
             if test_name != "Stool examination":
                 categories.append("% Parasitemia")
@@ -260,7 +267,6 @@ with tab1:
                         "คะแนนเต็ม": max_score
                     })
 
-                    # ตรวจสอบ Mismatch
                     is_mismatch = set(lab_ans) != set(assign_ans) if isinstance(lab_ans, list) else lab_str != assign_str
                     if is_mismatch or obt_score < max_score:
                         nc_items.append({
@@ -294,9 +300,7 @@ with tab1:
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
-    # ==========================================
-    # กรณี 2: UA (Urinalysis)
-    # ==========================================
+    # 2. กรณี UA (Urinalysis)
     elif test_name == "UA":
         st.info("💡 ป้อนค่า Assigned Value และคะแนนในแต่ละพารามิเตอร์ เพื่อคำนวณ Standard Score รวม")
         
@@ -372,9 +376,7 @@ with tab1:
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
-    # ==========================================
-    # กรณี 3: Quantitative
-    # ==========================================
+    # 3. กรณี Quantitative
     elif "Quantitative" in test_type:
         st.info("💡 สามารถปรับแต่งชื่อ Sample ID และกรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ได้ในตาราง")
         default_tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
@@ -437,9 +439,7 @@ with tab1:
                 st.metric("Sigma Metric", f"{row_res['Sigma']:.2f}" if not np.isnan(row_res['Sigma']) else "N/A")
                 st.caption(f"**Rule**: {row_res['Multirule']}")
 
-    # ==========================================
-    # กรณี 4: Qualitative with Scoring
-    # ==========================================
+    # 4. กรณี Qualitative with Scoring
     elif "Scoring" in test_type:
         qual_opts = get_qual_options_for_test(test_name)
         
@@ -508,9 +508,7 @@ with tab1:
             else:
                 st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
 
-    # ==========================================
-    # กรณี 5: Qualitative Basic
-    # ==========================================
+    # 5. กรณี Qualitative Basic
     else:
         st.info("💡 กรอกผลตรวจและค่าเป้าหมายเพื่อเทียบความสอดคล้อง (Concordance)")
         qual_opts = get_qual_options_for_test(test_name)
@@ -543,9 +541,7 @@ with tab1:
                     "สถานะปัญหา": "Mismatch"
                 })
 
-    # ==========================================
     # ส่วนทบทวนและวิเคราะห์สาเหตุ (Non-conformity)
-    # ==========================================
     st.markdown("---")
     st.subheader("🔍 สรุปรายการที่ไม่เป็นไปตามข้อกำหนด & การทบทวนทางเทคนิค (ISO 15189)")
     
@@ -570,16 +566,14 @@ with tab1:
             height=120
         )
 
-    # ==========================================
     # ปุ่มบันทึกข้อมูล
-    # ==========================================
     if st.button("💾 บันทึกผล EQA และบันทึกการทบทวน", type="primary"):
         if not test_name:
             st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
         else:
             new_rows = []
             
-            # 1. บันทึกกลุ่ม Blood parasite / Stool
+            # บันทึกกลุ่ม Blood parasite / Stool
             if test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
                 for s_label, (sub_df, sub_tot_obt, sub_tot_m) in bp_results.items():
                     for _, r in sub_df.iterrows():
@@ -615,7 +609,7 @@ with tab1:
                             'Review_Action': review_action
                         })
 
-            # 2. บันทึกกลุ่ม UA
+            # บันทึกกลุ่ม UA
             elif test_name == "UA":
                 for s_label, (sub_df, sub_tot_obt, sub_tot_m) in ua_results.items():
                     for _, r in sub_df.iterrows():
@@ -651,40 +645,32 @@ with tab1:
                             'Review_Action': review_action
                         })
 
-            # 3. บันทึกกลุ่ม Quantitative
+            # บันทึกกลุ่ม Quantitative
             elif "Quantitative" in test_type:
-                for idx, row in edited_df.iterrows():
-                    sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
-                    l_res = float(row['Lab Result'])
-                    a_val = float(row['Assigned Value'])
-                    sd_grp = float(row['SD Group'])
-                    l_sd = float(row['Lab SD'])
-                    l_cv = float(row['Lab %CV'])
-                    tea = float(row['TEa (%)'])
-                    interp = str(row['Interpretation'])
+                for idx, r in edited_df.iterrows():
+                    l_res, a_val, sd_grp = float(r['Lab Result']), float(r['Assigned Value']), float(r['SD Group'])
+                    l_sd, cv_lab, tea = float(r['Lab SD']), float(r['Lab %CV']), float(r['TEa (%)'])
+                    s_id, interp = str(r['รหัสตัวอย่าง (Sample ID)']), str(r['Interpretation'])
                     
-                    z_score = (l_res - a_val) / sd_grp if sd_grp > 0 else np.nan
-                    bias_pct = (abs(l_res - a_val) / a_val * 100) if a_val > 0 else np.nan
-                    sigma = ((tea - bias_pct) / l_cv) if l_cv > 0 and not np.isnan(bias_pct) else np.nan
-                    rule = evaluate_westgard_rules(sigma)
+                    row_calc = calc_rows[idx]
                     
                     new_rows.append({
                         'Cycle': cycle,
                         'Department': department,
                         'Test_Name': test_name,
-                        'Sample_ID': sample_id,
-                        'Test_Type': 'Quantitative',
-                        'Lab_Result': str(l_res),
-                        'Assigned_Value': str(a_val),
+                        'Sample_ID': s_id,
+                        'Test_Type': test_type,
+                        'Lab_Result': l_res,
+                        'Assigned_Value': a_val,
                         'SD_Group': sd_grp,
-                        'Z_Score': round(z_score, 2) if not np.isnan(z_score) else np.nan,
+                        'Z_Score': row_calc['Z-Score'],
                         'Interpretation': interp,
                         'Lab_SD': l_sd,
-                        'Lab_CV': l_cv,
+                        'Lab_CV': cv_lab,
                         'TEa_Percent': tea,
-                        'Bias_Percent': round(bias_pct, 2) if not np.isnan(bias_pct) else np.nan,
-                        'Sigma_Metric': round(sigma, 2) if not np.isnan(sigma) else np.nan,
-                        'Recommended_Multirule': rule,
+                        'Bias_Percent': row_calc['Bias (%)'],
+                        'Sigma_Metric': row_calc['Sigma'],
+                        'Recommended_Multirule': row_calc['Multirule'],
                         'Score_Obtained': np.nan,
                         'Max_Score': np.nan,
                         'Score_Percent': np.nan,
@@ -694,21 +680,19 @@ with tab1:
                         'Review_Action': review_action
                     })
 
-            # 4. บันทึกกลุ่ม Scoring
+            # บันทึกกลุ่ม Qualitative with Scoring
             elif "Scoring" in test_type:
-                for _, row in edited_df.iterrows():
-                    sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
-                    l_res = str(row['Lab Result'])
-                    a_val = str(row['Assigned Value'])
-                    s_obt = float(row['คะแนนที่ได้ (Obtained)'])
-                    s_max = float(row['คะแนนเต็ม (Max Score)'])
+                for _, r in edited_df.iterrows():
+                    s_id = str(r['รหัสตัวอย่าง (Sample ID)'])
+                    l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+                    obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
                     
                     new_rows.append({
                         'Cycle': cycle,
                         'Department': department,
                         'Test_Name': test_name,
-                        'Sample_ID': sample_id,
-                        'Test_Type': 'Qualitative (Scoring)',
+                        'Sample_ID': s_id,
+                        'Test_Type': test_type,
                         'Lab_Result': l_res,
                         'Assigned_Value': a_val,
                         'SD_Group': np.nan,
@@ -720,8 +704,8 @@ with tab1:
                         'Bias_Percent': np.nan,
                         'Sigma_Metric': np.nan,
                         'Recommended_Multirule': 'N/A',
-                        'Score_Obtained': s_obt,
-                        'Max_Score': s_max,
+                        'Score_Obtained': obt_sc,
+                        'Max_Score': max_sc,
                         'Score_Percent': round(calc_pct, 2),
                         'Standard_Score': np.nan,
                         'Status': calc_status,
@@ -729,132 +713,133 @@ with tab1:
                         'Review_Action': review_action
                     })
 
-            # 5. บันทึกกลุ่ม Qualitative Basic
+            # บันทึกกลุ่ม Qualitative Basic
             else:
-                for _, row in edited_df.iterrows():
-                    sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
-                    l_res = str(row['Lab Result'])
-                    a_val = str(row['Assigned Value'])
-                    status = "Acceptable" if l_res == a_val else "Unsatisfactory"
+                for _, r in edited_df.iterrows():
+                    s_id = str(r['รหัสตัวอย่าง (Sample ID)'])
+                    l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+                    is_match = (l_res == a_val)
                     
                     new_rows.append({
                         'Cycle': cycle,
                         'Department': department,
                         'Test_Name': test_name,
-                        'Sample_ID': sample_id,
-                        'Test_Type': 'Qualitative (Basic)',
+                        'Sample_ID': s_id,
+                        'Test_Type': test_type,
                         'Lab_Result': l_res,
                         'Assigned_Value': a_val,
                         'SD_Group': np.nan,
                         'Z_Score': np.nan,
-                        'Interpretation': "Match" if l_res == a_val else "Mismatch",
+                        'Interpretation': "Match" if is_match else "Mismatch",
                         'Lab_SD': np.nan,
                         'Lab_CV': np.nan,
                         'TEa_Percent': np.nan,
                         'Bias_Percent': np.nan,
                         'Sigma_Metric': np.nan,
                         'Recommended_Multirule': 'N/A',
-                        'Score_Obtained': np.nan,
-                        'Max_Score': np.nan,
-                        'Score_Percent': np.nan,
-                        'Standard_Score': np.nan,
-                        'Status': status,
+                        'Score_Obtained': 1.0 if is_match else 0.0,
+                        'Max_Score': 1.0,
+                        'Score_Percent': 100.0 if is_match else 0.0,
+                        'Standard_Score': 4.0 if is_match else 0.0,
+                        'Status': "Acceptable" if is_match else "Unsatisfactory",
                         'Root_Cause': root_cause,
                         'Review_Action': review_action
                     })
 
+            # เพิ่มข้อมูลลง DataFrame และบันทึกลงไฟล์ CSV
             new_df = pd.DataFrame(new_rows)
             df = pd.concat([df, new_df], ignore_index=True)
             save_data(df)
-            st.success(f"บันทึกข้อมูลสำเร็จ! บันทึกข้อมูลเพิ่ม {len(new_rows)} รายการเรียบร้อยแล้ว")
+            st.success("✅ บันทึกข้อมูล EQA เรียบร้อยแล้ว!")
             st.rerun()
 
-# ==========================================
+# =========================================================
 # TAB 2: Dashboard สรุปผล & Multirules
-# ==========================================
+# =========================================================
 with tab2:
-    st.header("📊 Dashboard สรุปผลการประเมินภาพรวม")
+    st.header("📊 Dashboard สรุปผล & คำแนะนำ Westgard Multirules")
     
     if df.empty:
-        st.info("ยังไม่มีข้อมูลในระบบ กรุณากรอกข้อมูลใน Tab แรกก่อน")
+        st.info("ยังไม่มีข้อมูลในระบบ กรุณากรอกข้อมูลใน Tab 'กรอกผล EQA'")
     else:
+        # ตัวกรองข้อมูล (Filter)
         col_f1, col_f2 = st.columns(2)
         with col_f1:
-            selected_dept = st.selectbox("กรองตามสาขา", ["ทั้งหมด"] + list(df['Department'].unique()))
+            selected_dept = st.selectbox("เลือกสาขาห้องปฏิบัติการ", ["ทั้งหมด"] + list(df['Department'].unique()))
         with col_f2:
-            cycles = ["ทั้งหมด"] + list(df['Cycle'].unique())
-            selected_cycle = st.selectbox("กรองตามรอบการทดสอบ", cycles)
-        
-        filtered_df = df.copy()
-        if selected_dept != "ทั้งหมด":
-            filtered_df = filtered_df[filtered_df['Department'] == selected_dept]
+            filtered_df = df if selected_dept == "ทั้งหมด" else df[df['Department'] == selected_dept]
+            selected_cycle = st.selectbox("เลือกรอบการทดสอบ (Cycle)", ["ทั้งหมด"] + list(filtered_df['Cycle'].unique()))
+            
         if selected_cycle != "ทั้งหมด":
             filtered_df = filtered_df[filtered_df['Cycle'] == selected_cycle]
-            
+
+        # Key Metrics Summary
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("จำนวนรายการทั้งหมด", len(filtered_df))
-        quant_df = filtered_df[filtered_df['Test_Type'] == 'Quantitative']
-        m2.metric("รายการ Quantitative", len(quant_df))
-        avg_sigma = quant_df['Sigma_Metric'].mean()
-        m3.metric("ค่าเฉลี่ย Sigma Metric", f"{avg_sigma:.2f}" if not np.isnan(avg_sigma) else "N/A")
-        nc_count = len(filtered_df[filtered_df['Status'].isin(['Unsatisfactory', 'Unacceptable', 'Action Required', 'Warning'])])
-        m4.metric("รายการที่มีปัญหา (NC)", nc_count)
         
+        quant_df = filtered_df[filtered_df['Sigma_Metric'].notna()]
+        avg_sigma = quant_df['Sigma_Metric'].mean() if not quant_df.empty else 0.0
+        m2.metric("ค่าเฉลี่ย Sigma Metric", f"{avg_sigma:.2f}" if not quant_df.empty else "N/A")
+        
+        pass_count = len(filtered_df[filtered_df['Status'].isin(['Acceptable', 'Excellent', 'Good', 'Satisfactory'])])
+        pass_rate = (pass_count / len(filtered_df) * 100) if len(filtered_df) > 0 else 0.0
+        m3.metric("อัตราการผ่านเกณฑ์ (%)", f"{pass_rate:.1f}%")
+        
+        nc_count = len(filtered_df) - pass_count
+        m4.metric("รายการที่ไม่ผ่าน/ต้องทบทวน", f"{nc_count}")
+
         st.markdown("---")
         
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            st.subheader("สัดส่วนสถานะการประเมิน (Status Distribution)")
-            if not filtered_df.empty:
-                fig_status = px.pie(
-                    filtered_df, 
-                    names='Status', 
-                    title="Status Breakdown",
-                    color='Status',
-                    color_discrete_map=COLOR_MAP
-                )
-                st.plotly_chart(fig_status, use_container_width=True)
-                
-        with col_g2:
-            st.subheader("การกระจายของ Sigma Metric (Quantitative)")
-            if not quant_df.empty and quant_df['Sigma_Metric'].dropna().count() > 0:
-                fig_sigma = px.histogram(
-                    quant_df, 
-                    x='Sigma_Metric', 
-                    nbins=10, 
-                    title="Sigma Metric Distribution",
-                    color_discrete_sequence=['#3498db']
-                )
-                st.plotly_chart(fig_sigma, use_container_width=True)
-            else:
-                st.info("ไม่มีข้อมูล Sigma Metric ในเงื่อนไขที่เลือก")
+        # กราฟแสดง Sigma Metric สำหรับรายการ Quantitative
+        if not quant_df.empty:
+            st.subheader("📈 Performance Metrics (Sigma Metric)")
+            fig_sigma = px.bar(
+                quant_df, 
+                x='Test_Name', 
+                y='Sigma_Metric', 
+                color='Status',
+                color_discrete_map=COLOR_MAP,
+                title="Sigma Metric แยกตามรายการทดสอบ",
+                hover_data=['Cycle', 'Sample_ID', 'Bias_Percent', 'Lab_CV']
+            )
+            fig_sigma.add_hline(y=6.0, line_dash="dash", line_color="green", annotation_text="6 Sigma (World Class)")
+            fig_sigma.add_hline(y=3.0, line_dash="dash", line_color="red", annotation_text="3 Sigma (Minimum Performance)")
+            st.plotly_chart(fig_sigma, use_container_width=True)
 
-# ==========================================
+        # ตารางสรุป Multirules ที่แนะนำ
+        st.subheader("🎯 ตารางแนะนำการเลือก Westgard Rules ตามค่า Sigma Metric")
+        if not quant_df.empty:
+            summary_rules = quant_df[['Test_Name', 'Sample_ID', 'Sigma_Metric', 'Recommended_Multirule']].drop_duplicates()
+            st.dataframe(summary_rules, use_container_width=True)
+        else:
+            st.caption("ไม่มีข้อมูล Quantitative สำหรับคำนวณ Sigma Metric")
+
+# =========================================================
 # TAB 3: ประวัติและ Export ข้อมูล
-# ==========================================
+# =========================================================
 with tab3:
-    st.header("📋 ประวัติการบันทึกข้อมูลทั้งหมด & Export")
+    st.header("📋 ประวัติข้อมูล EQA ทั้งหมด และการ Export")
     
     if df.empty:
-        st.info("ยังไม่มีข้อมูลในระบบ")
+        st.info("ยังไม่มีข้อมูลบันทึกในระบบ")
     else:
         st.dataframe(df, use_container_width=True)
         
-        col_exp1, col_exp2 = st.columns([1, 4])
-        with col_exp1:
-            csv_data = df.to_csv(index=False).encode('utf-8')
+        col_ex1, col_ex2 = st.columns(2)
+        with col_ex1:
+            csv_data = df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
-                label="📥 Download CSV File",
+                label="📥 ดาวน์โหลดข้อมูลเป็น CSV",
                 data=csv_data,
-                file_name="eqa_and_sigma_data.csv",
+                file_name="eqa_sigma_tracking_data.csv",
                 mime="text/csv",
                 type="primary"
             )
-            
-        st.markdown("---")
-        if st.checkbox("⚠️ ต้องการลบข้อมูลทั้งหมดหรือไม่?"):
-            if st.button("🗑️ ยืนยันการล้างข้อมูลทั้งหมด"):
-                df = pd.DataFrame(columns=df.columns)
-                save_data(df)
-                st.success("ล้างข้อมูลเรียบร้อยแล้ว")
+        
+        with col_ex2:
+            if st.button("🗑️ ล้างข้อมูลทั้งหมดในระบบ", type="secondary"):
+                if os.path.exists(DATA_FILE):
+                    os.remove(DATA_FILE)
+                st.cache_data.clear()
+                st.success("ลบข้อมูลสำเร็จแล้ว!")
                 st.rerun()
