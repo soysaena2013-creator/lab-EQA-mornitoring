@@ -178,7 +178,7 @@ with tab1:
 
     # กรณี CBC
     if test_name == "CBC":
-        st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC และ ส่วนที่ 2 Slide Smear (พร้อมคำนวณ Lab Performance อัตโนมัติ)")
+        st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC และ ส่วนที่ 2 Slide Smear")
         
         for s_idx in range(num_samples):
             st.markdown(f"##### 🩸 **ตัวอย่างที่ {s_idx + 1}**")
@@ -243,17 +243,17 @@ with tab1:
             st.markdown("---")
             st.markdown("###### **ส่วนที่ 2: Slide Smear**")
             
-            # ส่วนที่ 2.1 WBC differential count (เพิ่มคอลัมน์ Lab Performance อัตโนมัติ)
+            # ส่วนที่ 2.1 WBC differential count (จัดเรียงคอลัมน์: Parameter -> Mean -> SD -> Lab Result -> Lab DI -> Lab Performance)
             st.markdown("**2.1 WBC differential count**")
             p21_data = []
             for param in CBC_SLIDE_WBC_PARAMS:
                 p21_data.append({
                     "Parameter": param,
+                    "Mean": 0.0,
+                    "SD": 0.0,
                     "Lab Result": 0.0,
                     "Lab DI": 0.0,
-                    "Lab Performance": "Excellent",
-                    "Mean": 0.0,
-                    "SD": 0.0
+                    "Lab Performance": "Excellent"
                 })
             df_p21 = pd.DataFrame(p21_data)
             
@@ -263,11 +263,11 @@ with tab1:
                 use_container_width=True,
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
+                    "Mean": st.column_config.NumberColumn("Mean", format="%.2f"),
+                    "SD": st.column_config.NumberColumn("SD", format="%.2f"),
                     "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
                     "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f"),
-                    "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True),
-                    "Mean": st.column_config.NumberColumn("Mean", format="%.2f"),
-                    "SD": st.column_config.NumberColumn("SD", format="%.2f")
+                    "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True)
                 }
             )
             
