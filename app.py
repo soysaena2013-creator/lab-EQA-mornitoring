@@ -20,29 +20,39 @@ TEA_TABLE = {
     "K": 0.5, "Cl": 5.0, "Hba1c": 6.0, "DEFAULT": 10.0
 }
 
-# รายการย่อยสำหรับ CBC (ส่วนที่ 1)
-CBC_PART1_PARAMS = [
-    "RBC count (10^6/ul)", "WBC count (10^3/ul)", "PLT count (10^3/ul)",
-    "Hemoglobin concentration (g/dl)", "Hematocrit (%)", "MCV (fl)", "MCH (pg)", "MCHC (g/dl)"
+# พารามิเตอร์ย่อยสำหรับ UA 10 รายการ
+UA_PARAMETERS = [
+    "Specific Gravity", "pH", "Leukocytes", "Nitrite", 
+    "Protein", "Glucose", "Ketone", "Urobilinogen", "Bilirubin", "Blood"
 ]
 
-# รายการย่อยสำหรับ Slide Smear (ส่วนที่ 2.1: WBC differential count)
-CBC_SLIDE_WBC_PARAMS = [
-    "neutrophils", "lymphocytes", "eosinophils", "basophils", "monocytes",
-    "atypical lymphocytes", "promyelocytes", "myelocytes", "metamyelocytes",
-    "band-form neutrophils", "plasma cells", "blast cells", "NRBC/100WBC"
+UA_OPTIONS = {
+    "Specific Gravity": ["1.000", "1.005", "1.010", "1.015", "1.020", "1.025", "1.030", "1.035"],
+    "pH": ["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0"],
+    "Leukocytes": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Nitrite": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Protein": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Glucose": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Ketone": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Urobilinogen": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Bilirubin": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
+    "Blood": ["Negative", "Trace", "1+", "2+", "3+", "4+"]
+}
+
+# ตัวเลือกสำหรับ Gram's Stain ย่อย
+GRAM_REACTION_OPTIONS = ["Gram-positive", "Gram-negative", "Gram-variable", "No organism seen"]
+GRAM_MORPHOLOGY_OPTIONS = ["Cocci", "Diplococci", "Bacilli / Rods", "Coccobacilli", "Spirilla / Curved rods", "Filamentous rods", "Yeast cells / Budding yeast", "No organism seen"]
+
+# ตัวเลือกเชื้อและระยะสำหรับ Parasite & Stool
+SPECIES_OPTIONS = [
+    "Plasmodium falciparum", "Plasmodium vivax", "Plasmodium malariae", "Plasmodium ovale", "Plasmodium knowlesi",
+    "Entamoeba histolytica", "Entamoeba coli", "Giardia lamblia", "Ascaris lumbricoides", "Hookworm", "Strongyloides stercoralis",
+    "Trichuris trichiura", "Opisthorchis viverrini", "Taenia spp.", "Not Found / Negative"
 ]
 
-# รายการย่อยสำหรับ Slide Smear (ส่วนที่ 2.2: RBC morphology)
-CBC_SLIDE_RBC_PARAMS = [
-    "normocytes", "microcytosis", "macrocytosis", "hypochromia", "polychromasia",
-    "target cell", "acanthocyte", "burr cell", "ovalocyte", "schistocyte",
-    "spherocyte", "stomatocyte", "tear drop cell", "rouleaux formation",
-    "agglutination", "cabot's ring", "basophilic stippling", "howell jolly bodies"
+STAGE_OPTIONS = [
+    "Ring form", "Trophozoite", "Schizont", "Gametocyte", "Cyst", "Trophozoite (Ameba)", "Egg / Ovum", "Larva", "Adult worm", "Not Found"
 ]
-
-# รายการย่อยสำหรับ Slide Smear (ส่วนที่ 2.3: Platelet estimation)
-CBC_SLIDE_PLT_PARAMS = ["decreased", "adequate", "increased"]
 
 DEPARTMENTS = [
     "Immunology",
@@ -72,14 +82,33 @@ QUAL_OPTIONS = {
     ],
     "syphilis_methods": ["RPR", "VDRL", "Syphilis Ab", "TPHA"],
     "pos_neg": ["Positive", "Negative", "Inconclusive"],
-    "afb": ["Not Found / Negative", "1-9 AFB / 100 fields", "1+", "2+", "3+"],
+    "afb": [
+        "Not Found / Negative",
+        "1-9 AFB / 100 fields",
+        "1+", "2+", "3+"
+    ],
     "stain": ["Found", "Not Found", "Yeasts Found", "No Organism Found"],
     "koh": [
-        "Not Found / No fungal element seen", "Yeast cells found", "Yeast cells with pseudohyphae found",
-        "Septate hyphae found", "Non-septate / Aseptate hyphae found", "Arthrospores / Arthroconidia found", "Budding yeast cells found"
+        "Not Found / No fungal element seen",
+        "Yeast cells found",
+        "Yeast cells with pseudohyphae found",
+        "Septate hyphae found",
+        "Non-septate / Aseptate hyphae found",
+        "Arthrospores / Arthroconidia found",
+        "Budding yeast cells found"
     ],
     "titer": ["1:2", "1:4", "1:8", "1:16", "1:32", "1:64", "1:128", "1:256", "Negative"],
     "general": ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal", "Inconclusive", "Normal", "Abnormal"]
+}
+
+COLOR_MAP = {
+    'Excellent': '#27ae60',
+    'Good': '#2ecc71',
+    'Satisfactory': '#f1c40f',
+    'Unsatisfactory': '#e74c3c',
+    'Unacceptable': '#e74c3c',
+    'Acceptable': '#2ecc71',
+    'Warning': '#f39c12'
 }
 
 # ---------------------------------------------------------
@@ -105,34 +134,39 @@ def save_data(df):
     df.to_csv(DATA_FILE, index=False)
     st.cache_data.clear()
 
-def evaluate_di_performance(di):
-    if np.isnan(di):
-        return "N/A"
-    di_abs = abs(di)
-    if di_abs <= 0.5:
-        return "Excellent"
-    elif 0.5 < di_abs <= 1.0:
-        return "Good"
-    elif 1.0 < di_abs <= 2.0:
-        return "Satisfactory"
-    elif 2.0 < di_abs <= 3.0:
-        return "Unsatisfactory"
+def get_qual_options_for_test(test_name):
+    if test_name in ["ABO grouping", "Rh grouping"]:
+        return QUAL_OPTIONS["blood_bank"]
+    elif test_name == "Syphilis":
+        return QUAL_OPTIONS["syphilis"]
+    elif test_name in ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Leptospira antibody", "Scrub typhus antibody"]:
+        return QUAL_OPTIONS["serology"]
+    elif test_name in ["melioid titer"]:
+        return QUAL_OPTIONS["titer"]
+    elif test_name == "AFB":
+        return QUAL_OPTIONS["afb"]
+    elif test_name == "KOH":
+        return QUAL_OPTIONS["koh"]
+    elif test_name in ["Indiaink preperation"]:
+        return QUAL_OPTIONS["stain"]
+    elif test_name in ["UPT", "FOB", "COVID-19 TEST", "Dengue NS1", "Methamphetamine screening test", "Marijuana screening test"]:
+        return QUAL_OPTIONS["pos_neg"]
     else:
-        return "Serious problem"
+        return QUAL_OPTIONS["general"]
 
-def evaluate_score_performance(score):
-    if np.isnan(score):
+def evaluate_westgard_rules(sigma):
+    if np.isnan(sigma):
         return "N/A"
-    if score >= 3.5:
-        return "Excellent"
-    elif 3.0 <= score < 3.5:
-        return "Good"
-    elif 2.5 <= score < 3.0:
-        return "Satisfactory"
-    elif 1.5 <= score < 2.5:
-        return "Unsatisfactory"
+    elif sigma >= 6.0:
+        return "1-3s (World Class - N=1)"
+    elif sigma >= 5.0:
+        return "1-3s / 2-2s / R-4s (Excellent - N=2)"
+    elif sigma >= 4.0:
+        return "1-3s / 2-2s / R-4s / 4-1s (Good - N=2)"
+    elif sigma >= 3.0:
+        return "1-3s / 2-2s / R-4s / 4-1s / 10x (Marginal - N=2 or N=4)"
     else:
-        return "Serious problem"
+        return "Unacceptable (<3.0) - ต้องแก้ไข Root Cause / Re-calibrate ก่อนเลือก Rule"
 
 # ---------------------------------------------------------
 # Main Application Layout
@@ -154,7 +188,7 @@ with tab1:
     with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
     with col_c2:
-        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Hematology") if "Hematology" in DEPARTMENTS else 0)
+        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Immunology") if "Immunology" in DEPARTMENTS else 0)
     with col_c3:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
@@ -164,369 +198,462 @@ with tab1:
     if test_name == "Syphilis":
         test_method = st.selectbox("วิธีที่ใช้ทดสอบ (Test Method)", QUAL_OPTIONS["syphilis_methods"])
 
-    num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
+    if test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
+        test_type = f"{test_name} Multi-Parameter Scoring"
+        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
+    else:
+        default_mode_index = 1 if department in ["Immunology", "Microscopy", "Microbiology"] else 0
+        col_m1, col_m2 = st.columns([2, 1])
+        with col_m1:
+            test_type = st.radio(
+                "โหมดการประเมินผล", 
+                [
+                    "Quantitative (เชิงปริมาณ + Z-score & Sigma Metric)", 
+                    "Qualitative with Scoring (ประเมินด้วยคะแนน & % ภาพรวม)", 
+                    "Qualitative Basic (เทียบ Concordance ตรงๆ)"
+                ], 
+                index=default_mode_index,
+                horizontal=True
+            )
+        with col_m2:
+            num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=2, step=1)
 
     st.markdown("---")
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     nc_items = []
-    store_data = []
+    submitted_data_list = []
 
-    # ==========================================
-    # 1. กรณี CBC (Custom Multi-Part)
-    # ==========================================
-    if test_name == "CBC":
-        st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC และ ส่วนที่ 2 Slide Smear")
+    # 1. กรณี Gram's stain
+    if test_name == "Gram's stain":
+        st.info("💡 **Gram's stain**: กรอกผลแยกตาม 2 หัวข้อย่อย ได้แก่ การติดสี (Gram Reaction) และ รูปร่างของแบคทีเรีย (Morphology)")
         
+        total_obtained_all_samples = 0.0
+        total_max_all_samples = 0.0
+
         for s_idx in range(num_samples):
-            st.markdown(f"##### 🩸 **ตัวอย่างที่ {s_idx + 1}**")
-            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"cbc_sid_{s_idx}")
+            st.markdown(f"##### 🧫 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"gram_sid_key_{s_idx}")
             
-            # --- ส่วนที่ 1: CBC ---
-            st.markdown("---")
-            st.markdown("###### **ส่วนที่ 1: CBC (8 รายการ)**")
-            part1_data = []
-            for param in CBC_PART1_PARAMS:
-                part1_data.append({
-                    "Parameter": param,
-                    "Lab Result": 0.0,
-                    "Lab DI": 0.0,
-                    "Lab Performance": "Excellent"
-                })
-            df_part1 = pd.DataFrame(part1_data)
-            
-            edited_part1 = st.data_editor(
-                df_part1,
-                key=f"cbc_p1_editor_{s_idx}",
-                use_container_width=True,
-                column_config={
-                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
-                    "Lab DI": st.column_config.NumberColumn("Lab DI (Deviation Index)", format="%.2f"),
-                    "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True)
-                }
-            )
-            
-            for i in range(len(edited_part1)):
-                di_val = float(edited_part1.loc[i, "Lab DI"])
-                edited_part1.loc[i, "Lab Performance"] = evaluate_di_performance(di_val)
-            
-            for _, r in edited_part1.iterrows():
-                p_name = r["Parameter"]
-                l_res = float(r["Lab Result"])
-                di_val = float(r["Lab DI"])
-                perf = str(r["Lab Performance"])
-                
-                store_data.append({
-                    'Sample_ID': sample_id_input,
-                    'Section': 'Part 1: CBC',
-                    'Item_Name': p_name,
-                    'Lab_Result': str(l_res),
-                    'Assigned_Value': 'N/A',
-                    'Lab_DI': di_val,
-                    'Performance': perf
-                })
-                
-                if perf in ["Unsatisfactory", "Serious problem"]:
-                    nc_items.append({
-                        "รายการ/Sample": f"{sample_id_input} - CBC ({p_name})",
-                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
-                        "ค่าเป้าหมาย (Assigned Value)": f"DI: {di_val:.2f}",
-                        "สถานะปัญหา": f"Performance: {perf}"
+            categories = ["การติดสี (Gram Reaction)", "รูปร่างของแบคทีเรีย (Morphology)"]
+            sample_obtained = 0.0
+            sample_max = 0.0
+            sample_details = []
+
+            with st.expander(f"📌 กรอกผล Gram's stain สำหรับ {sample_id_input}", expanded=True):
+                for cat in categories:
+                    st.markdown(f"**🔹 {cat}**")
+                    col_res1, col_res2, col_sc1, col_sc2 = st.columns([3, 3, 1, 1])
+                    
+                    opts = GRAM_REACTION_OPTIONS if cat == "การติดสี (Gram Reaction)" else GRAM_MORPHOLOGY_OPTIONS
+                    
+                    with col_res1:
+                        lab_ans = st.selectbox(f"Lab Result ({cat})", options=opts, key=f"lab_gram_{s_idx}_{cat}")
+                    with col_res2:
+                        assign_ans = st.selectbox(f"Assigned Value ({cat})", options=opts, key=f"ass_gram_{s_idx}_{cat}")
+
+                    with col_sc1:
+                        obt_score = st.number_input("คะแนนได้", min_value=0.0, value=1.0, step=0.5, key=f"obt_gram_{s_idx}_{cat}")
+                    with col_sc2:
+                        max_score = st.number_input("คะแนนเต็ม", min_value=0.1, value=1.0, step=0.5, key=f"max_gram_{s_idx}_{cat}")
+
+                    sample_obtained += obt_score
+                    sample_max += max_score
+
+                    sample_details.append({
+                        "หัวข้อย่อย": cat, "Lab Result": lab_ans, "Assigned Value": assign_ans,
+                        "คะแนนที่ได้": obt_score, "คะแนนเต็ม": max_score
                     })
 
-            # --- ส่วนที่ 2: Slide smear ---
-            st.markdown("---")
-            st.markdown("###### **ส่วนที่ 2: Slide Smear**")
-            
-            # ส่วนที่ 2.1 WBC differential count
-            st.markdown("**2.1 WBC differential count**")
-            p21_data = []
-            for param in CBC_SLIDE_WBC_PARAMS:
-                p21_data.append({
-                    "Parameter": param,
-                    "Lab Result": 0.0,
-                    "Lab DI": 0.0,
-                    "Lab Performance": "Excellent"
-                })
-            df_p21 = pd.DataFrame(p21_data)
-            
-            edited_p21 = st.data_editor(
-                df_p21,
-                key=f"cbc_p21_editor_{s_idx}",
-                use_container_width=True,
-                column_config={
-                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
-                    "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f"),
-                    "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True)
-                }
-            )
-            
-            for i in range(len(edited_p21)):
-                di_val = float(edited_p21.loc[i, "Lab DI"])
-                edited_p21.loc[i, "Lab Performance"] = evaluate_di_performance(di_val)
-            
-            for _, r in edited_p21.iterrows():
-                p_name = r["Parameter"]
-                l_res = float(r["Lab Result"])
-                di_val = float(r["Lab DI"])
-                perf = str(r["Lab Performance"])
-                
-                store_data.append({
-                    'Sample_ID': sample_id_input,
-                    'Section': 'Part 2.1: WBC diff',
-                    'Item_Name': p_name,
-                    'Lab_Result': str(l_res),
-                    'Assigned_Value': 'N/A',
-                    'Lab_DI': di_val,
-                    'Performance': perf
-                })
-                
-                if perf in ["Unsatisfactory", "Serious problem"]:
-                    nc_items.append({
-                        "รายการ/Sample": f"{sample_id_input} - WBC diff ({p_name})",
-                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
-                        "ค่าเป้าหมาย (Assigned Value)": f"DI: {di_val:.2f}",
-                        "สถานะปัญหา": f"Performance: {perf}"
-                    })
+                    if lab_ans != assign_ans or obt_score < max_score:
+                        nc_items.append({
+                            "รายการ/Sample": f"{sample_id_input} - Gram's stain ({cat})",
+                            "ผลตรวจห้องปฏิบัติการ": lab_ans, "ค่าเป้าหมาย (Assigned Value)": assign_ans,
+                            "สถานะปัญหา": f"Mismatch / คะแนนได้ {obt_score}/{max_score}"
+                        })
 
-            # ส่วนที่ 2.2 RBC morphology (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเอง)
-            st.markdown("**2.2 RBC morphology** (พิมพ์ 'seen' หรือเว้นว่างหากไม่พบ)")
-            p22_data = []
-            for param in CBC_SLIDE_RBC_PARAMS:
-                p22_data.append({
-                    "Parameter": param,
-                    "Lab Result": "",
-                    "Assigned Value": ""
-                })
-            df_p22 = pd.DataFrame(p22_data)
-            
-            edited_p22 = st.data_editor(
-                df_p22,
-                key=f"cbc_p22_editor_{s_idx}",
-                use_container_width=True,
-                column_config={
-                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.TextColumn("Lab Result"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
-                }
-            )
-            
-            p22_total_score = st.number_input(f"คะแนนรวม RBC morphology ของ {sample_id_input}", min_value=0.0, max_value=100.0, value=4.0, step=0.1, key=f"p22_score_{s_idx}")
-            p22_perf = evaluate_score_performance(p22_total_score)
-            st.info(f"📊 คะแนนรวม RBC morphology: **{p22_total_score:.2f}** | Performance รวม: **{p22_perf}**")
-            
-            for _, r in edited_p22.iterrows():
-                store_data.append({
-                    'Sample_ID': sample_id_input,
-                    'Section': 'Part 2.2: RBC morphology',
-                    'Item_Name': r["Parameter"],
-                    'Lab_Result': str(r["Lab Result"]),
-                    'Assigned_Value': str(r["Assigned Value"]),
-                    'Lab_DI': np.nan,
-                    'Performance': p22_perf
-                })
+            total_obtained_all_samples += sample_obtained
+            total_max_all_samples += sample_max
+            st.caption(f"คะแนนรวมเฉพาะ {sample_id_input}: **{sample_obtained:.1f} / {sample_max:.1f}**")
 
-            # ส่วนที่ 2.3 Platelet estimation (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเอง)
-            st.markdown("**2.3 Platelet estimation** (พิมพ์ 'seen' หรือเว้นว่างหากไม่พบ)")
-            p23_data = []
-            for param in CBC_SLIDE_PLT_PARAMS:
-                p23_data.append({
-                    "Parameter": param,
-                    "Lab Result": "",
-                    "Assigned Value": ""
-                })
-            df_p23 = pd.DataFrame(p23_data)
-            
-            edited_p23 = st.data_editor(
-                df_p23,
-                key=f"cbc_p23_editor_{s_idx}",
-                use_container_width=True,
-                column_config={
-                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.TextColumn("Lab Result"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
-                }
-            )
-            
-            p23_total_score = st.number_input(f"คะแนนรวม Platelet estimation ของ {sample_id_input}", min_value=0.0, max_value=100.0, value=4.0, step=0.1, key=f"p23_score_{s_idx}")
-            p23_perf = evaluate_score_performance(p23_total_score)
-            st.info(f"📊 คะแนนรวม Platelet estimation: **{p23_total_score:.2f}** | Performance รวม: **{p23_perf}**")
-            
-            for _, r in edited_p23.iterrows():
-                store_data.append({
-                    'Sample_ID': sample_id_input,
-                    'Section': 'Part 2.3: Platelet estimation',
-                    'Item_Name': r["Parameter"],
-                    'Lab_Result': str(r["Lab Result"]),
-                    'Assigned_Value': str(r["Assigned Value"]),
-                    'Lab_DI': np.nan,
-                    'Performance': p23_perf
-                })
+            submitted_data_list.append({
+                'Cycle': cycle, 'Department': department, 'Test_Name': test_name, 'Test_Method': test_method,
+                'Sample_ID': sample_id_input, 'Test_Type': test_type, 'Score_Obtained': sample_obtained,
+                'Max_Score': sample_max, 'Score_Percent': (sample_obtained/sample_max*100) if sample_max>0 else 0,
+                'Status': 'Evaluated'
+            })
 
-    # ==========================================
-    # 2. กรณีสาขาอื่นๆ ทั่วไป (Quantitative / Qualitative)
-    # ==========================================
-    else:
-        is_qualitative = department in ["Immunology", "Microbiology", "Blood bank"] or test_name in ["UA", "Stool examination", "Blood parasite", "UPT", "COVID-19 TEST"]
+        overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
+        overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
+
+        if overall_std_score >= 4.0: eval_status = "Excellent"
+        elif 3.50 <= overall_std_score < 4.0: eval_status = "Good"
+        elif 3.00 <= overall_std_score < 3.50: eval_status = "Satisfactory"
+        else: eval_status = "Unsatisfactory"
+
+        st.markdown("---")
+        st.markdown("#### 🎯 ผลการสรุปคะแนนภาพรวม Gram's stain (รวมทุก Sample)")
+        sc_c1, sc_c2, sc_c3 = st.columns(3)
+        sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
+        sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
+        sc_c3.metric("Scoring Evaluation", eval_status)
+
+    # 2. กรณี Blood parasite & Stool examination
+    elif test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
+        st.info(f"💡 **{test_name}**: หัวข้อย่อยถูกล็อกไว้ตามมาตรฐาน — ท่านสามารถเลือก/พิมพ์คำตอบได้มากกว่า 1 รายการ (Multi-select)")
         
+        total_obtained_all_samples = 0.0
+        total_max_all_samples = 0.0
+
+        for s_idx in range(num_samples):
+            st.markdown(f"##### 🔬 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"bp_sid_key_{s_idx}")
+            
+            categories = ["ตระกูลและสายพันธุ์ (Species)", "ระยะที่พบ (Stage)"]
+            if test_name != "Stool examination":
+                categories.append("% Parasitemia")
+
+            sample_obtained = 0.0
+            sample_max = 0.0
+
+            with st.expander(f"📌 กรอกผลตรวจสำหรับ {sample_id_input}", expanded=True):
+                for cat in categories:
+                    st.markdown(f"**🔹 {cat}**")
+                    col_res1, col_res2, col_sc1, col_sc2 = st.columns([3, 3, 1, 1])
+                    
+                    if cat == "ตระกูลและสายพันธุ์ (Species)":
+                        with col_res1:
+                            lab_ans = st.multiselect(f"Lab Result ({cat})", options=SPECIES_OPTIONS, default=["Plasmodium falciparum"] if "Blood parasite" in test_name else ["Entamoeba histolytica"], key=f"lab_{s_idx}_{cat}")
+                        with col_res2:
+                            assign_ans = st.multiselect(f"Assigned Value ({cat})", options=SPECIES_OPTIONS, default=["Plasmodium falciparum"] if "Blood parasite" in test_name else ["Entamoeba histolytica"], key=f"ass_{s_idx}_{cat}")
+                    elif cat == "ระยะที่พบ (Stage)":
+                        with col_res1:
+                            lab_ans = st.multiselect(f"Lab Result ({cat})", options=STAGE_OPTIONS, default=["Ring form"] if "Blood parasite" in test_name else ["Cyst"], key=f"lab_{s_idx}_{cat}")
+                        with col_res2:
+                            assign_ans = st.multiselect(f"Assigned Value ({cat})", options=STAGE_OPTIONS, default=["Ring form"] if "Blood parasite" in test_name else ["Cyst"], key=f"ass_{s_idx}_{cat}")
+                    else:
+                        with col_res1:
+                            lab_ans = st.text_input(f"Lab Result ({cat})", value="1.5%", key=f"lab_{s_idx}_{cat}")
+                        with col_res2:
+                            assign_ans = st.text_input(f"Assigned Value ({cat})", value="1.5%", key=f"ass_{s_idx}_{cat}")
+
+                    with col_sc1:
+                        obt_score = st.number_input("คะแนนได้", min_value=0.0, value=1.0, step=0.5, key=f"obt_{s_idx}_{cat}")
+                    with col_sc2:
+                        max_score = st.number_input("คะแนนเต็ม", min_value=0.1, value=1.0, step=0.5, key=f"max_{s_idx}_{cat}")
+
+                    lab_str = ", ".join(lab_ans) if isinstance(lab_ans, list) else str(lab_ans)
+                    assign_str = ", ".join(assign_ans) if isinstance(assign_ans, list) else str(assign_ans)
+
+                    sample_obtained += obt_score
+                    sample_max += max_score
+
+                    is_mismatch = set(lab_ans) != set(assign_ans) if isinstance(lab_ans, list) else lab_str != assign_str
+                    if is_mismatch or obt_score < max_score:
+                        nc_items.append({
+                            "รายการ/Sample": f"{sample_id_input} - {test_name} ({cat})",
+                            "ผลตรวจห้องปฏิบัติการ": lab_str, "ค่าเป้าหมาย (Assigned Value)": assign_str,
+                            "สถานะปัญหา": f"Mismatch / คะแนนได้ {obt_score}/{max_score}"
+                        })
+
+            total_obtained_all_samples += sample_obtained
+            total_max_all_samples += sample_max
+            st.caption(f"คะแนนรวมเฉพาะ {sample_id_input}: **{sample_obtained:.1f} / {sample_max:.1f}**")
+
+            submitted_data_list.append({
+                'Cycle': cycle, 'Department': department, 'Test_Name': test_name, 'Test_Method': test_method,
+                'Sample_ID': sample_id_input, 'Test_Type': test_type, 'Score_Obtained': sample_obtained,
+                'Max_Score': sample_max, 'Score_Percent': (sample_obtained/sample_max*100) if sample_max>0 else 0,
+                'Status': 'Evaluated'
+            })
+
+        overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
+        
+        if overall_std_score >= 4.0: eval_status = "Excellent"
+        elif 3.50 <= overall_std_score < 4.0: eval_status = "Good"
+        elif 3.00 <= overall_std_score < 3.50: eval_status = "Satisfactory"
+        else: eval_status = "Unsatisfactory"
+
+        st.markdown("---")
+        st.markdown(f"#### 🎯 ผลการสรุปคะแนนภาพรวม {test_name} (รวมทุก Sample)")
+        sc_c1, sc_c2, sc_c3 = st.columns(3)
+        sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
+        sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
+        sc_c3.metric("Scoring Evaluation", eval_status)
+
+    # 3. กรณี UA (Urinalysis)
+    elif test_name == "UA":
+        st.info("💡 ป้อนค่า Assigned Value และคะแนนในแต่ละพารามิเตอร์ เพื่อคำนวณ Standard Score รวม")
+        
+        total_obtained_all_samples = 0.0
+        total_max_all_samples = 0.0
+
         for s_idx in range(num_samples):
             st.markdown(f"##### 🧪 **ตัวอย่างที่ {s_idx + 1}**")
-            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"std_sid_{s_idx}")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"ua_sid_key_{s_idx}")
             
-            if is_qualitative:
-                qual_choices = QUAL_OPTIONS["general"]
-                if department == "Blood bank":
-                    qual_choices = QUAL_OPTIONS["blood_bank"]
-                elif test_name == "Syphilis":
-                    qual_choices = QUAL_OPTIONS["syphilis"]
-                elif test_name == "AFB":
-                    qual_choices = QUAL_OPTIONS["afb"]
-                elif test_name == "Gram's stain":
-                    qual_choices = QUAL_OPTIONS["stain"]
-                elif test_name == "KOH":
-                    qual_choices = QUAL_OPTIONS["koh"]
-
-                col_q1, col_q2, col_q3 = st.columns(3)
-                with col_q1:
-                    lab_res = st.selectbox(f"ผลตรวจ Lab (Sample {s_idx+1})", qual_choices, key=f"lab_res_{s_idx}")
-                with col_q2:
-                    assigned_res = st.selectbox(f"ค่าเป้าหมาย Assigned Value (Sample {s_idx+1})", qual_choices, key=f"as_res_{s_idx}")
-                with col_q3:
-                    score_obt = st.number_input(f"คะแนนที่ได้ (Score)", min_value=0.0, max_value=100.0, value=4.0, step=0.1, key=f"sc_obt_{s_idx}")
-                
-                perf = evaluate_score_performance(score_obt)
-                st.info(f"📊 ประเมินผล: **{perf}**")
-
-                if perf in ["Unsatisfactory", "Serious problem"]:
+            ua_data = []
+            for param in UA_PARAMETERS:
+                opts = UA_OPTIONS[param]
+                ua_data.append({
+                    "พารามิเตอร์ (Parameter)": param, "Lab Result": opts[0], "Assigned Value": opts[0],
+                    "คะแนนที่ได้ (Obtained)": 1.0, "คะแนนเต็ม (Max Score)": 1.0
+                })
+            
+            ua_df = pd.DataFrame(ua_data)
+            edited_ua = st.data_editor(
+                ua_df, key=f"ua_editor_{s_idx}", use_container_width=True,
+                column_config={
+                    "พารามิเตอร์ (Parameter)": st.column_config.TextColumn("พารามิเตอร์", disabled=True),
+                    "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=list(set(sum(UA_OPTIONS.values(), []))), required=True),
+                    "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=list(set(sum(UA_OPTIONS.values(), []))), required=True),
+                    "คะแนนที่ได้ (Obtained)": st.column_config.NumberColumn("คะแนนที่ได้", min_value=0.0, format="%.1f"),
+                    "คะแนนเต็ม (Max Score)": st.column_config.NumberColumn("คะแนนเต็ม", min_value=0.1, format="%.1f")
+                }
+            )
+            
+            sample_obt = edited_ua['คะแนนที่ได้ (Obtained)'].sum()
+            sample_max = edited_ua['คะแนนเต็ม (Max Score)'].sum()
+            
+            total_obtained_all_samples += sample_obt
+            total_max_all_samples += sample_max
+            
+            for _, r in edited_ua.iterrows():
+                l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+                obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
+                if l_res != a_val or obt_sc < max_sc:
                     nc_items.append({
-                        "รายการ/Sample": f"{sample_id_input} - {test_name}",
-                        "ผลตรวจห้องปฏิบัติการ": str(lab_res),
-                        "ค่าเป้าหมาย (Assigned Value)": str(assigned_res),
-                        "สถานะปัญหา": f"Performance: {perf}"
+                        "รายการ/Sample": f"{sample_id_input} - UA ({r['พารามิเตอร์ (Parameter)']})",
+                        "ผลตรวจห้องปฏิบัติการ": l_res, "ค่าเป้าหมาย (Assigned Value)": a_val,
+                        "สถานะปัญหา": "Mismatch / คะแนนไม่เต็ม"
                     })
 
-                store_data.append({
-                    'Sample_ID': sample_id_input,
-                    'Section': 'Qualitative Test',
-                    'Item_Name': test_name,
-                    'Lab_Result': str(lab_res),
-                    'Assigned_Value': str(assigned_res),
-                    'Lab_DI': np.nan,
-                    'Performance': perf,
-                    'Score_Obtained': score_obt
+            submitted_data_list.append({
+                'Cycle': cycle, 'Department': department, 'Test_Name': test_name, 'Test_Method': test_method,
+                'Sample_ID': sample_id_input, 'Test_Type': test_type, 'Score_Obtained': sample_obt,
+                'Max_Score': sample_max, 'Score_Percent': (sample_obt/sample_max*100) if sample_max>0 else 0,
+                'Status': 'Evaluated'
+            })
+            st.caption(f"คะแนนเฉพาะ {sample_id_input}: {sample_obt:.1f} / {sample_max:.1f}")
+
+        overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
+        if overall_std_score >= 4.0: eval_status = "Excellent"
+        elif 3.50 <= overall_std_score < 4.0: eval_status = "Good"
+        elif 3.00 <= overall_std_score < 3.50: eval_status = "Satisfactory"
+        else: eval_status = "Unsatisfactory"
+
+        st.markdown("---")
+        st.markdown("#### 🎯 ผลการสรุปคะแนนภาพรวม UA (รวมทุก Sample)")
+        sc_c1, sc_c2, sc_c3 = st.columns(3)
+        sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
+        sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
+        sc_c3.metric("Scoring Evaluation", eval_status)
+
+    # 4. กรณี Quantitative
+    elif "Quantitative" in test_type:
+        st.info("💡 สามารถปรับแต่งชื่อ Sample ID และกรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ได้ในตาราง")
+        default_tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
+        
+        init_data = pd.DataFrame({
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
+            'Lab Result': [100.0] * num_samples, 'Assigned Value': [100.0] * num_samples,
+            'SD Group': [3.0] * num_samples, 'Lab SD': [2.0] * num_samples,
+            'Lab %CV': [2.0] * num_samples, 'TEa (%)': [default_tea] * num_samples,
+            'Interpretation': ['Acceptable'] * num_samples
+        })
+        
+        edited_df = st.data_editor(
+            init_data, num_rows="dynamic", use_container_width=True,
+            column_config={
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
+                "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
+                "Assigned Value": st.column_config.NumberColumn("Assigned Value", format="%.2f"),
+                "SD Group": st.column_config.NumberColumn("SD Group (Peer)", format="%.2f"),
+                "Lab SD": st.column_config.NumberColumn("Lab SD", format="%.2f"),
+                "Lab %CV": st.column_config.NumberColumn("Lab %CV", format="%.2f%%"),
+                "TEa (%)": st.column_config.NumberColumn("TEa (%)", format="%.1f%%"),
+                "Interpretation": st.column_config.SelectboxColumn("Interpretation", options=["Acceptable", "Warning", "Unacceptable", "Action Required"])
+            }
+        )
+
+        calc_rows = []
+        for _, r in edited_df.iterrows():
+            l_res, a_val, sd_grp = float(r['Lab Result']), float(r['Assigned Value']), float(r['SD Group'])
+            cv_lab, tea = float(r['Lab %CV']), float(r['TEa (%)'])
+            s_id, interp = str(r['รหัสตัวอย่าง (Sample ID)']), str(r['Interpretation'])
+            
+            z_score = (l_res - a_val) / sd_grp if sd_grp > 0 else np.nan
+            bias_pct = (abs(l_res - a_val) / a_val * 100) if a_val > 0 else np.nan
+            sigma = ((tea - bias_pct) / cv_lab) if cv_lab > 0 and not np.isnan(bias_pct) else np.nan
+            rule = evaluate_westgard_rules(sigma)
+            
+            calc_rows.append({'Z-Score': z_score, 'Bias (%)': bias_pct, 'Sigma': sigma, 'Multirule': rule})
+
+            submitted_data_list.append({
+                'Cycle': cycle, 'Department': department, 'Test_Name': test_name, 'Test_Method': test_method,
+                'Sample_ID': s_id, 'Test_Type': test_type, 'Lab_Result': l_res, 'Assigned_Value': a_val,
+                'SD_Group': sd_grp, 'Z_Score': z_score, 'Interpretation': interp, 'Bias_Percent': bias_pct,
+                'Sigma_Metric': sigma, 'Recommended_Multirule': rule, 'Status': interp
+            })
+
+            if interp in ["Unacceptable", "Warning", "Action Required"] or (not np.isnan(z_score) and abs(z_score) > 2.0):
+                nc_items.append({
+                    "รายการ/Sample": f"{test_name} ({s_id})",
+                    "ผลตรวจห้องปฏิบัติการ": str(l_res), "ค่าเป้าหมาย (Assigned Value)": str(a_val),
+                    "สถานะปัญหา": f"{interp} (Z-score: {z_score:.2f})"
                 })
-            else:
-                # เคมีคลินิก หรือทดสอบเชิงปริมาณทั่วไป (Quantitative)
-                col_qn1, col_qn2, col_qn3 = st.columns(3)
-                with col_qn1:
-                    lab_val = st.number_input(f"ผลตรวจ Lab Value (Sample {s_idx+1})", value=0.0, format="%.2f", key=f"qn_lab_{s_idx}")
-                with col_qn2:
-                    mean_val = st.number_input(f"ค่าเฉลี่ยกลุ่ม (Mean / Assigned)", value=0.0, format="%.2f", key=f"qn_mean_{s_idx}")
-                with col_qn3:
-                    sd_val = st.number_input(f"ค่า SD กลุ่ม", value=1.0, format="%.2f", key=f"qn_sd_{s_idx}")
 
-                z_score = (lab_val - mean_val) / sd_val if sd_val > 0 else 0.0
-                perf = evaluate_di_performance(z_score)
-                
-                tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
-                bias = abs((lab_val - mean_val) / mean_val * 100) if mean_val != 0 else 0.0
-                cv = (sd_val / mean_val * 100) if mean_val != 0 else 0.0
-                sigma = (tea - bias) / cv if cv > 0 else 0.0
+        res_summary = pd.DataFrame(calc_rows)
+        st.markdown("#### 🎯 ผลการประมวลผล Sigma Metric & Westgard Rule (Real-time)")
+        res_cols = st.columns(min(len(calc_rows), 5))
+        for idx, row_res in res_summary.iterrows():
+            with res_cols[idx % len(res_cols)]:
+                st.metric(f"{edited_df.iloc[idx]['รหัสตัวอย่าง (Sample ID)']} - Z-score", f"{row_res['Z-Score']:.2f}" if not np.isnan(row_res['Z-Score']) else "N/A")
+                st.metric("Sigma Metric", f"{row_res['Sigma']:.2f}" if not np.isnan(row_res['Sigma']) else "N/A")
+                st.caption(f"**Rule**: {row_res['Multirule']}")
 
-                st.info(f"📊 Z-Score / DI: **{z_score:.2f}** | Performance: **{perf}** | Sigma Metric: **{sigma:.2f}**")
+    # 5. กรณี Qualitative with Scoring
+    elif "Scoring" in test_type:
+        qual_opts = get_qual_options_for_test(test_name)
+        
+        init_data = pd.DataFrame({
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
+            'Lab Result': [qual_opts[0]] * num_samples, 'Assigned Value': [qual_opts[0]] * num_samples,
+            'คะแนนที่ได้ (Obtained)': [100.0] * num_samples, 'คะแนนเต็ม (Max Score)': [100.0] * num_samples
+        })
+        
+        edited_df = st.data_editor(
+            init_data, num_rows="dynamic", use_container_width=True,
+            column_config={
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
+                "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
+                "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True),
+                "คะแนนที่ได้ (Obtained)": st.column_config.NumberColumn("คะแนนที่ได้", min_value=0.0, format="%.1f"),
+                "คะแนนเต็ม (Max Score)": st.column_config.NumberColumn("คะแนนเต็ม", min_value=0.1, format="%.1f")
+            }
+        )
 
-                if perf in ["Unsatisfactory", "Serious problem"]:
-                    nc_items.append({
-                        "รายการ/Sample": f"{sample_id_input} - {test_name}",
-                        "ผลตรวจห้องปฏิบัติการ": str(lab_val),
-                        "ค่าเป้าหมาย (Assigned Value)": f"Mean: {mean_val}",
-                        "สถานะปัญหา": f"Z-Score: {z_score:.2f} ({perf})"
-                    })
+        tot_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
+        tot_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
+        calc_pct = (tot_obtained / tot_max * 100) if tot_max > 0 else 0.0
 
-                store_data.append({
-                    'Sample_ID': sample_id_input,
-                    'Section': 'Quantitative Test',
-                    'Item_Name': test_name,
-                    'Lab_Result': str(lab_val),
-                    'Assigned_Value': str(mean_val),
-                    'Lab_DI': z_score,
-                    'Performance': perf,
-                    'Sigma_Metric': sigma
+        if calc_pct == 100.0: calc_status, status_desc = "Excellent", "ดีเยี่ยม (100%)"
+        elif 80.0 <= calc_pct < 100.0: calc_status, status_desc = "Good", "ดี (80.0% - 99.9%)"
+        elif 70.0 <= calc_pct < 80.0: calc_status, status_desc = "Satisfactory", "ยอมรับได้ / ผ่านเกณฑ์ขั้นต่ำ (70.0% - 79.9%)"
+        else: calc_status, status_desc = "Unsatisfactory", "ต้องปรับปรุง / ไม่ผ่านเกณฑ์ (< 70.0%)"
+
+        for _, r in edited_df.iterrows():
+            l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+            s_id = str(r['รหัสตัวอย่าง (Sample ID)'])
+            obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
+            
+            submitted_data_list.append({
+                'Cycle': cycle, 'Department': department, 'Test_Name': test_name, 'Test_Method': test_method,
+                'Sample_ID': s_id, 'Test_Type': test_type, 'Lab_Result': l_res, 'Assigned_Value': a_val,
+                'Score_Obtained': obt_sc, 'Max_Score': max_sc, 'Score_Percent': (obt_sc/max_sc*100) if max_sc>0 else 0,
+                'Status': calc_status
+            })
+
+            if l_res != a_val or obt_sc < max_sc:
+                nc_items.append({
+                    "รายการ/Sample": f"{test_name} ({s_id})",
+                    "ผลตรวจห้องปฏิบัติการ": l_res, "ค่าเป้าหมาย (Assigned Value)": a_val,
+                    "สถานะปัญหา": "Mismatch / คะแนนไม่เต็ม"
                 })
 
-    # ส่วนทบทวนและวิเคราะห์สาเหตุ (Non-conformity)
-    st.markdown("---")
-    st.subheader("🔍 สรุปรายการที่ไม่เป็นไปตามข้อกำหนด & การทบทวนทางเทคนิค (ISO 15189)")
-    
-    if nc_items:
-        st.warning(f"⚠️ พบ {len(nc_items)} รายการที่ไม่ผ่านเกณฑ์ กรุณาระบุสาเหตุและแนวทางแก้ไข")
-        st.dataframe(pd.DataFrame(nc_items), use_container_width=True)
+        st.markdown("#### 🎯 ผลการคำนวณคะแนนภาพรวม (Real-time Calculation)")
+        sc_col1, sc_col2, sc_col3 = st.columns([1, 1, 2])
+        sc_col1.metric("คะแนนรวมที่ได้ / เต็ม", f"{tot_obtained:.1f} / {tot_max:.1f}")
+        sc_col2.metric("คะแนนร้อยละภาพรวม", f"{calc_pct:.2f}%")
+        with sc_col3:
+            if calc_status == "Excellent": st.success(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            elif calc_status == "Good": st.info(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            elif calc_status == "Satisfactory": st.warning(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            else: st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+
+    # 6. กรณี Qualitative Basic
     else:
-        st.success("✅ ผลการทดสอบทุกรายการผ่านเกณฑ์ตามข้อกำหนดทั้งหมด")
+        st.info("💡 กรอกผลตรวจและค่าเป้าหมายเพื่อเทียบความสอดคล้อง (Concordance)")
+        qual_opts = get_qual_options_for_test(test_name)
+        
+        init_data = pd.DataFrame({
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
+            'Lab Result': [qual_opts[0]] * num_samples,
+            'Assigned Value': [qual_opts[0]] * num_samples
+        })
+        
+        edited_df = st.data_editor(
+            init_data, num_rows="dynamic", use_container_width=True,
+            column_config={
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
+                "Lab Result": st.column_config.TextColumn("Lab Result", required=True) if test_name == "Urine sediment by photo observation" else st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
+                "Assigned Value": st.column_config.TextColumn("Assigned Value", required=True) if test_name == "Urine sediment by photo observation" else st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True)
+            }
+        )
 
-    col_rc1, col_rc2 = st.columns(2)
-    with col_rc1:
-        root_cause = st.text_area("📌 สาเหตุที่ไม่ผ่าน (Root Cause Analysis)", height=120)
-    with col_rc2:
-        review_action = st.text_area("🛠️ ผลการทบทวน / มาตรการแก้ไข (Corrective & Preventive Action)", height=120)
+        for _, r in edited_df.iterrows():
+            l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+            s_id = str(r['รหัสตัวอย่าง (Sample ID)'])
+            status_val = "Acceptable" if l_res == a_val else "Unacceptable"
 
-    # ปุ่มบันทึกข้อมูล
-    if st.button("💾 บันทึกผล EQA และบันทึกการทบทวน", type="primary"):
-        if not test_name:
-            st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
-        else:
-            new_rows = []
-            for item in store_data:
-                new_rows.append({
-                    'Cycle': cycle,
-                    'Department': department,
-                    'Test_Name': f"{test_name} - {item['Section']} ({item['Item_Name']})" if test_name == "CBC" else test_name,
-                    'Test_Method': test_method,
-                    'Sample_ID': item['Sample_ID'],
-                    'Test_Type': item['Section'],
-                    'Lab_Result': item['Lab_Result'],
-                    'Assigned_Value': item['Assigned_Value'],
-                    'SD_Group': np.nan,
-                    'Z_Score': item.get('Lab_DI', np.nan),
-                    'Interpretation': item['Performance'],
-                    'Lab_SD': np.nan,
-                    'Lab_CV': np.nan,
-                    'TEa_Percent': np.nan,
-                    'Bias_Percent': np.nan,
-                    'Sigma_Metric': item.get('Sigma_Metric', np.nan),
-                    'Recommended_Multirule': 'N/A',
-                    'Score_Obtained': item.get('Score_Obtained', np.nan),
-                    'Max_Score': np.nan,
-                    'Score_Percent': np.nan,
-                    'Standard_Score': np.nan,
-                    'Status': item['Performance'],
-                    'Root_Cause': root_cause,
-                    'Review_Action': review_action
+            submitted_data_list.append({
+                'Cycle': cycle, 'Department': department, 'Test_Name': test_name, 'Test_Method': test_method,
+                'Sample_ID': s_id, 'Test_Type': test_type, 'Lab_Result': l_res, 'Assigned_Value': a_val,
+                'Status': status_val
+            })
+
+            if l_res != a_val:
+                nc_items.append({
+                    "รายการ/Sample": f"{test_name} ({s_id})",
+                    "ผลตรวจห้องปฏิบัติการ": l_res, "ค่าเป้าหมาย (Assigned Value)": a_val,
+                    "สถานะปัญหา": "Concordance Mismatch"
                 })
 
-            new_df = pd.DataFrame(new_rows)
-            df = pd.concat([df, new_df], ignore_index=True)
-            save_data(df)
-            st.success("✅ บันทึกข้อมูล EQA เรียบร้อยแล้ว!")
-            st.rerun()
+    # บันทึกข้อมูลลง CSV
+    st.markdown("---")
+    if st.button("💾 บันทึกผลการทดสอบลงในระบบ", type="primary", use_container_width=True):
+        if submitted_data_list:
+            new_df = pd.DataFrame(submitted_data_list)
+            updated_df = pd.concat([df, new_df], ignore_index=True)
+            save_data(updated_df)
+            st.success("บันทึกข้อมูลสำเร็จเรียบร้อยแล้ว!")
+        else:
+            st.warning("ไม่พบข้อมูลสำหรับบันทึก")
 
 # =========================================================
-# TAB 2 & TAB 3
+# TAB 2: Dashboard สรุปผล & Multirules
 # =========================================================
 with tab2:
-    st.header("📊 Dashboard สรุปผล & คำแนะนำ Westgard Multirules")
+    st.header("📊 ภาพรวมผลการทดสอบ EQA (Dashboard & Analytics)")
+    
     if df.empty:
-        st.info("ยังไม่มีข้อมูลในระบบ")
+        st.info("ยังไม่มีข้อมูลในระบบ กรุณากรอกและบันทึกข้อมูลใน Tab 1 ก่อน")
     else:
-        st.dataframe(df, use_container_width=True)
+        col_d1, col_d2, col_d3, col_d4 = st.columns(4)
+        col_d1.metric("จำนวนรอบ/รายการทั้งหมด", len(df))
+        col_d2.metric("จำนวนแผนก", df['Department'].nunique())
+        col_d3.metric("รายการทดสอบทั้งหมด", df['Test_Name'].nunique())
+        
+        # กราฟแสดงสัดส่วน Status
+        st.markdown("---")
+        fig_status = px.pie(df, names='Status', title="สัดส่วนสถานะผลการประเมิน (Status Breakdown)", color_discrete_map=COLOR_MAP)
+        st.plotly_chart(fig_status, use_container_width=True)
 
+# =========================================================
+# TAB 3: ประวัติและ Export ข้อมูล
+# =========================================================
 with tab3:
-    st.header("📋 ประวัติข้อมูล EQA ทั้งหมด และการ Export")
+    st.header("📋 ประวัติการบันทึกข้อมูล EQA ทั้งหมด")
+    
     if df.empty:
-        st.info("ยังไม่มีข้อมูลบันทึกในระบบ")
+        st.info("ยังไม่มีประวัติข้อมูลในระบบ")
     else:
         st.dataframe(df, use_container_width=True)
+        
         csv_data = df.to_csv(index=False).encode('utf-8-sig')
-        st.download_button("📥 ดาวน์โหลดข้อมูลเป็น CSV", data=csv_data, file_name="eqa_tracking_data.csv", mime="text/csv", type="primary")
+        st.download_button(
+            label="📥 ดาวน์โหลดข้อมูลทั้งหมดเป็น CSV",
+            data=csv_data,
+            file_name="eqa_tracking_data.csv",
+            mime="text/csv"
+        )
