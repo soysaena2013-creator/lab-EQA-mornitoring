@@ -178,7 +178,7 @@ with tab1:
 
     # กรณี CBC
     if test_name == "CBC":
-        st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC (อัตโนมัติ 8 รายการ พร้อม Lab Performance คิดจาก Lab DI อัตโนมัติ) และ ส่วนที่ 2 Slide Smear")
+        st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC และ ส่วนที่ 2 Slide Smear (พร้อมคำนวณ Lab Performance อัตโนมัติ)")
         
         for s_idx in range(num_samples):
             st.markdown(f"##### 🩸 **ตัวอย่างที่ {s_idx + 1}**")
@@ -197,7 +197,6 @@ with tab1:
                 })
             df_part1 = pd.DataFrame(part1_data)
             
-            # ใช้ data_editor เพียงตารางเดียว และคำนวณ Lab Performance ทันทีแบบ Real-time
             edited_part1 = st.data_editor(
                 df_part1,
                 key=f"cbc_p1_editor_{s_idx}",
@@ -210,7 +209,6 @@ with tab1:
                 }
             )
             
-            # อัปเดตช่อง Lab Performance ตาม Lab DI ที่ผู้ใช้กรอกเข้ามาสดๆ
             for i in range(len(edited_part1)):
                 di_val = float(edited_part1.loc[i, "Lab DI"])
                 edited_part1.loc[i, "Lab Performance"] = evaluate_di_performance(di_val)
@@ -245,14 +243,15 @@ with tab1:
             st.markdown("---")
             st.markdown("###### **ส่วนที่ 2: Slide Smear**")
             
-            # ส่วนที่ 2.1 WBC differential count
-            st.markdown("**2.1 WBC differential count** (กรอก Lab Result, Lab DI, Mean, SD)")
+            # ส่วนที่ 2.1 WBC differential count (เพิ่มคอลัมน์ Lab Performance อัตโนมัติ)
+            st.markdown("**2.1 WBC differential count**")
             p21_data = []
             for param in CBC_SLIDE_WBC_PARAMS:
                 p21_data.append({
                     "Parameter": param,
                     "Lab Result": 0.0,
                     "Lab DI": 0.0,
+                    "Lab Performance": "Excellent",
                     "Mean": 0.0,
                     "SD": 0.0
                 })
@@ -266,10 +265,15 @@ with tab1:
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
                     "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
                     "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f"),
+                    "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True),
                     "Mean": st.column_config.NumberColumn("Mean", format="%.2f"),
                     "SD": st.column_config.NumberColumn("SD", format="%.2f")
                 }
             )
+            
+            for i in range(len(edited_p21)):
+                di_val = float(edited_p21.loc[i, "Lab DI"])
+                edited_p21.loc[i, "Lab Performance"] = evaluate_di_performance(di_val)
             
             for _, r in edited_p21.iterrows():
                 p_name = r["Parameter"]
@@ -277,7 +281,7 @@ with tab1:
                 di_val = float(r["Lab DI"])
                 mean_val = float(r["Mean"])
                 sd_val = float(r["SD"])
-                perf = evaluate_di_performance(di_val)
+                perf = str(r["Lab Performance"])
                 
                 cbc_results_store.append({
                     'Sample_ID': sample_id_input,
@@ -290,6 +294,14 @@ with tab1:
                     'SD': sd_val,
                     'Performance': perf
                 })
+                
+                if perf in ["Unsatisfactory", "Serious problem"]:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - WBC diff ({p_name})",
+                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
+                        "ค่าเป้าหมาย (Assigned Value)": f"DI: {di_val:.2f}",
+                        "สถานะปัญหา": f"Performance: {perf}"
+                    })
 
             # ส่วนที่ 2.2 RBC morphology
             st.markdown("**2.2 RBC morphology**")
