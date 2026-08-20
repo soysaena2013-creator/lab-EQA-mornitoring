@@ -166,7 +166,7 @@ with tab1:
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     if test_name == "UA":
-        st.info("💡 กรอกผลตรวจ 10 พารามิเตอร์ย่อย (ข้อละ 1 คะแนน) ระบบจะคำนวณ Standard Score = (คะแนนรวม * 4.0) / คะแนนเต็ม และประเมิน Scoring Evaluation ตามเกณฑ์ใหม่")
+        st.info("💡 กรอกผลตรวจ ค่า Assigned Value พร้อมคะแนนที่ได้ และคะแนนเต็มในแต่ละพารามิเตอร์ ระบบจะนำคะแนนรวมไปคำนวณ Standard Score = (คะแนนรวมที่ได้ * 4.0) / คะแนนเต็มรวม และประเมินผลตามเกณฑ์")
         
         ua_results = {}
         for s_idx in range(num_samples):
@@ -179,7 +179,9 @@ with tab1:
                 ua_data.append({
                     "พารามิเตอร์ (Parameter)": param,
                     "Lab Result": opts[0],
-                    "Assigned Value": opts[0]
+                    "Assigned Value": opts[0],
+                    "คะแนนที่ได้ (Obtained)": 1.0,
+                    "คะแนนเต็ม (Max Score)": 1.0
                 })
             
             ua_df = pd.DataFrame(ua_data)
@@ -190,17 +192,19 @@ with tab1:
                 column_config={
                     "พารามิเตอร์ (Parameter)": st.column_config.TextColumn("พารามิเตอร์", disabled=True),
                     "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=list(set(sum(UA_OPTIONS.values(), []))), required=True),
-                    "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=list(set(sum(UA_OPTIONS.values(), []))), required=True)
+                    "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=list(set(sum(UA_OPTIONS.values(), []))), required=True),
+                    "คะแนนที่ได้ (Obtained)": st.column_config.NumberColumn("คะแนนที่ได้", min_value=0.0, format="%.1f"),
+                    "คะแนนเต็ม (Max Score)": st.column_config.NumberColumn("คะแนนเต็ม", min_value=0.1, format="%.1f")
                 }
             )
             
-            # คำนวณ Standard Score
-            tot_obtained = sum(1.0 for _, r in edited_ua.iterrows() if str(r['Lab Result']).strip() == str(r['Assigned Value']).strip())
-            tot_max = float(len(edited_ua))
+            # คำนวณ Standard Score จากคะแนนที่กรอกจริง
+            tot_obtained = edited_ua['คะแนนที่ได้ (Obtained)'].sum()
+            tot_max = edited_ua['คะแนนเต็ม (Max Score)'].sum()
             std_score = round((tot_obtained * 4.0) / tot_max, 2) if tot_max > 0 else 0.0
             score_pct = (tot_obtained / tot_max * 100.0) if tot_max > 0 else 0.0
             
-            # เกณฑ์ประเมิน Scoring Evaluation ใหม่ตามที่ระบุ
+            # เกณฑ์ประเมิน Scoring Evaluation ตาม Standard Score
             if std_score >= 4.0:
                 eval_status = "Excellent"
             elif 3.50 <= std_score < 4.0:
@@ -211,7 +215,7 @@ with tab1:
                 eval_status = "Unsatisfactory"
 
             sc_c1, sc_c2, sc_c3 = st.columns(3)
-            sc_c1.metric(f"คะแนนรวม ({sample_label})", f"{tot_obtained:.0f} / {tot_max:.0f}")
+            sc_c1.metric(f"คะแนนรวม ({sample_label})", f"{tot_obtained:.1f} / {tot_max:.1f}")
             sc_c2.metric("Standard Score", f"{std_score:.2f}")
             sc_c3.metric("Scoring Evaluation", eval_status)
             st.markdown("---")
@@ -362,7 +366,8 @@ with tab1:
                         p_name = r['พารามิเตอร์ (Parameter)']
                         l_val = str(r['Lab Result'])
                         a_val = str(r['Assigned Value'])
-                        sub_score = 1.0 if l_val == a_val else 0.0
+                        sub_obt = float(r['คะแนนที่ได้ (Obtained)'])
+                        sub_max = float(r['คะแนนเต็ม (Max Score)'])
                         
                         new_rows.append({
                             'Cycle': cycle,
@@ -381,8 +386,8 @@ with tab1:
                             'Bias_Percent': np.nan,
                             'Sigma_Metric': np.nan,
                             'Recommended_Multirule': 'N/A',
-                            'Score_Obtained': sub_score,
-                            'Max_Score': 1.0,
+                            'Score_Obtained': sub_obt,
+                            'Max_Score': sub_max,
                             'Score_Percent': round(sc_pct, 2),
                             'Standard_Score': round(std_sc, 2),
                             'Status': eval_stat,
