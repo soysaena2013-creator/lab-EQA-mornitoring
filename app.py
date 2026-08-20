@@ -87,7 +87,8 @@ TEST_LISTS = {
         "COVID-19 TEST",
         "Influenza A+B TEST",
         "COVID-19/Influenza A+B test",
-        "COVID-19/Influenza A+B/RSV test"
+        "COVID-19/Influenza A+B/RSV test",
+        "Dengue NS1"
     ],
     "Microbiology": [
         "AFB",
@@ -103,8 +104,7 @@ TEST_LISTS = {
         "UPT",
         "Methamphetamine screening test",
         "Marijuana screening test",
-        "Fern test",
-        "Dengue NS1"
+        "Fern test"
     ],
     "Blood bank": [
         "ABO grouping",
