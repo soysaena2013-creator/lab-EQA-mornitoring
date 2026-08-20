@@ -144,7 +144,6 @@ with tab1:
         )
 
     elif "Scoring" in test_type:
-        st.info("💡 ระบบจะนำคะแนนรวมของทุก Sample หารด้วยคะแนนเต็มรวมทั้งหมด เพื่อคำนวณ % ภาพรวม (100% = Excellent | 80-99.9% = Good | 70-79.9% = Satisfactory | <70% = Unacceptable)")
         qual_opts = get_qual_options_for_test(test_name)
         
         init_data = pd.DataFrame({
@@ -167,6 +166,39 @@ with tab1:
                 "คะแนนเต็ม (Max Score)": st.column_config.NumberColumn("คะแนนเต็ม", min_value=0.1, format="%.1f")
             }
         )
+
+        # คำนวณคะแนนภาพรวมและระดับประเมินทันทีเพื่อโชว์บนหน้าจอ
+        tot_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
+        tot_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
+        calc_pct = (tot_obtained / tot_max * 100) if tot_max > 0 else 0.0
+
+        if calc_pct == 100.0:
+            calc_status = "Excellent"
+            status_desc = "ดีเยี่ยม (100%)"
+        elif 80.0 <= calc_pct < 100.0:
+            calc_status = "Good"
+            status_desc = "ดี (80.0% - 99.9%)"
+        elif 70.0 <= calc_pct < 80.0:
+            calc_status = "Satisfactory"
+            status_desc = "ยอมรับได้ / ผ่านเกณฑ์ขั้นต่ำ (70.0% - 79.9%)"
+        else:
+            calc_status = "Unacceptable"
+            status_desc = "ต้องปรับปรุง / ไม่ผ่านเกณฑ์ (< 70.0%)"
+
+        st.markdown("#### 🎯 ผลการคำนวณคะแนนภาพรวม (Real-time Calculation)")
+        sc_col1, sc_col2, sc_col3 = st.columns([1, 1, 2])
+        sc_col1.metric("คะแนนรวมที่ได้ / เต็ม", f"{tot_obtained:.1f} / {tot_max:.1f}")
+        sc_col2.metric("คะแนนร้อยละภาพรวม", f"{calc_pct:.2f}%")
+        
+        with sc_col3:
+            if calc_status == "Excellent":
+                st.success(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            elif calc_status == "Good":
+                st.info(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            elif calc_status == "Satisfactory":
+                st.warning(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            else:
+                st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
 
     else:
         st.info("💡 ระบุผลตรวจเทียบกับค่าเฉลย (Concordance)")
@@ -197,7 +229,6 @@ with tab1:
         else:
             new_rows = []
             
-            # คำนวณร้อยละภาพรวมก่อนสำหรับกรณี Scoring
             if "Scoring" in test_type:
                 total_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
                 total_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
@@ -266,7 +297,7 @@ with tab1:
                         'Assigned_Value': assigned_val_str,
                         'Score_Obtained': score_obtained,
                         'Max_Score': max_score,
-                        'Score_Percent': round(overall_pct, 2), # คิดร้อยละจากคะแนนรวมทุก sample
+                        'Score_Percent': round(overall_pct, 2),
                         'SD': np.nan,
                         'SDI': np.nan,
                         'Status': overall_status,
