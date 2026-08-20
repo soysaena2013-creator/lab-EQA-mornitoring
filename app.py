@@ -45,7 +45,8 @@ def load_data():
             'Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Test_Type',
             'Lab_Result', 'Assigned_Value', 'SD_Group', 'Z_Score', 'Interpretation',
             'Lab_SD', 'Lab_CV', 'TEa_Percent', 'Bias_Percent', 'Sigma_Metric', 'Recommended_Multirule',
-            'Score_Obtained', 'Max_Score', 'Score_Percent', 'Standard_Score', 'Status', 'Remark'
+            'Score_Obtained', 'Max_Score', 'Score_Percent', 'Standard_Score', 'Status', 
+            'Root_Cause', 'Review_Action'
         ])
 
 def save_data(df):
@@ -165,8 +166,10 @@ with tab1:
     st.markdown("---")
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
+    nc_items = []  # เก็บรายการที่ไม่เข้าตามข้อกำหนดเพื่อนำมาแสดงด้านล่าง
+
     if test_name == "UA":
-        st.info("💡 กรอกผลตรวจ ค่า Assigned Value พร้อมคะแนนที่ได้ และคะแนนเต็มในแต่ละพารามิเตอร์ ระบบจะรวมคะแนนของทุก Sample มารวมกันคำนวณ Standard Score = (คะแนนรวมทุก Sample ที่ได้ * 4.0) / คะแนนเต็มรวมทุก Sample")
+        st.info("💡 กรอกผลตรวจ ค่า Assigned Value พร้อมคะแนนที่ได้ และคะแนนเต็มในแต่ละพารามิเตอร์ ระบบจะรวมคะแนนของทุก Sample มารวมกันคำนวณ Standard Score")
         
         ua_results = {}
         total_obtained_all_samples = 0.0
@@ -207,14 +210,24 @@ with tab1:
             total_obtained_all_samples += sample_obt
             total_max_all_samples += sample_max
             
+            # ตรวจสอบ NC ย่อย (Mismatch หรือ ได้คะแนนไม่เต็ม)
+            for _, r in edited_ua.iterrows():
+                l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+                obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
+                if l_res != a_val or obt_sc < max_sc:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_label} - UA ({r['พารามิเตอร์ (Parameter)']})",
+                        "ผลตรวจห้องปฏิบัติการ": l_res,
+                        "ค่าเป้าหมาย (Assigned Value)": a_val,
+                        "สถานะปัญหา": "Mismatch / คะแนนไม่เต็ม"
+                    })
+
             ua_results[sample_label] = (edited_ua, sample_obt, sample_max)
             st.caption(f"คะแนนเฉพาะ {sample_label}: {sample_obt:.1f} / {sample_max:.1f}")
 
-        # คำนวณ Standard Score รวมทุก Sample
         overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
         overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
 
-        # เกณฑ์ประเมิน Scoring Evaluation จาก Standard Score รวม
         if overall_std_score >= 4.0:
             eval_status = "Excellent"
         elif 3.50 <= overall_std_score < 4.0:
@@ -266,6 +279,7 @@ with tab1:
         for _, r in edited_df.iterrows():
             l_res, a_val, sd_grp = float(r['Lab Result']), float(r['Assigned Value']), float(r['SD Group'])
             cv_lab, tea = float(r['Lab %CV']), float(r['TEa (%)'])
+            s_id, interp = str(r['รหัสตัวอย่าง (Sample ID)']), str(r['Interpretation'])
             
             z_score = (l_res - a_val) / sd_grp if sd_grp > 0 else np.nan
             bias_pct = (abs(l_res - a_val) / a_val * 100) if a_val > 0 else np.nan
@@ -273,6 +287,14 @@ with tab1:
             rule = evaluate_westgard_rules(sigma)
             
             calc_rows.append({'Z-Score': z_score, 'Bias (%)': bias_pct, 'Sigma': sigma, 'Multirule': rule})
+
+            if interp in ["Unacceptable", "Warning", "Action Required"] or (not np.isnan(z_score) and abs(z_score) > 2.0):
+                nc_items.append({
+                    "รายการ/Sample": f"{test_name} ({s_id})",
+                    "ผลตรวจห้องปฏิบัติการ": str(l_res),
+                    "ค่าเป้าหมาย (Assigned Value)": str(a_val),
+                    "สถานะปัญหา": f"{interp} (Z-score: {z_score:.2f})"
+                })
 
         res_summary = pd.DataFrame(calc_rows)
         
@@ -325,6 +347,18 @@ with tab1:
             calc_status = "Unsatisfactory"
             status_desc = "ต้องปรับปรุง / ไม่ผ่านเกณฑ์ (< 70.0%)"
 
+        for _, r in edited_df.iterrows():
+            l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+            s_id = str(r['รหัสตัวอย่าง (Sample ID)'])
+            obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
+            if l_res != a_val or obt_sc < max_sc:
+                nc_items.append({
+                    "รายการ/Sample": f"{test_name} ({s_id})",
+                    "ผลตรวจห้องปฏิบัติการ": l_res,
+                    "ค่าเป้าหมาย (Assigned Value)": a_val,
+                    "สถานะปัญหา": "Mismatch / คะแนนไม่เต็ม"
+                })
+
         st.markdown("#### 🎯 ผลการคำนวณคะแนนภาพรวม (Real-time Calculation)")
         sc_col1, sc_col2, sc_col3 = st.columns([1, 1, 2])
         sc_col1.metric("คะแนนรวมที่ได้ / เต็ม", f"{tot_obtained:.1f} / {tot_max:.1f}")
@@ -361,9 +395,45 @@ with tab1:
             }
         )
 
-    remark = st.text_area("บันทึกเพิ่มเติม / สาเหตุกรณีไม่ผ่าน (Root Cause / Corrective Action)", placeholder="เช่น Reagent Lot No., Calibration Status, Human Error")
+        for _, r in edited_df.iterrows():
+            l_res, a_val = str(r['Lab Result']), str(r['Assigned Value'])
+            s_id = str(r['รหัสตัวอย่าง (Sample ID)'])
+            if l_res != a_val:
+                nc_items.append({
+                    "รายการ/Sample": f"{test_name} ({s_id})",
+                    "ผลตรวจห้องปฏิบัติการ": l_res,
+                    "ค่าเป้าหมาย (Assigned Value)": a_val,
+                    "สถานะปัญหา": "Mismatch"
+                })
 
-    if st.button("💾 บันทึกผล EQA ทั้งหมด", type="primary"):
+    # ==========================================
+    # ส่วนทบทวนและวิเคราะห์สาเหตุ (Non-conformity & Root Cause Analysis)
+    # ==========================================
+    st.markdown("---")
+    st.subheader("🔍 สรุปรายการที่ไม่เป็นไปตามข้อกำหนด & การทบทวนทางเทคนิค (ISO 15189)")
+    
+    if nc_items:
+        st.warning(f"⚠️ พบ {len(nc_items)} รายการที่ไม่เป็นไปตามข้อกำหนด/ไม่ผ่านเกณฑ์ กรุณาระบุสาเหตุและผลการทบทวนเพื่อแก้ไข")
+        nc_df = pd.DataFrame(nc_items)
+        st.dataframe(nc_df, use_container_width=True)
+    else:
+        st.success("✅ ผลการทดสอบทุกรายการผ่านเกณฑ์ตามข้อกำหนดทั้งหมด")
+
+    col_rc1, col_rc2 = st.columns(2)
+    with col_rc1:
+        root_cause = st.text_area(
+            "📌 สาเหตุที่ไม่ผ่าน / สิ่งที่ไม่เป็นไปตามข้อกำหนด (Root Cause Analysis)", 
+            placeholder="เช่น Human Error, Reagent Deterioration, Calibration Failure, Pipette Out of Tolerance, Sample Storage Condition",
+            height=120
+        )
+    with col_rc2:
+        review_action = st.text_area(
+            "🛠️ ผลการทบทวน / มาตรการแก้ไขและป้องกัน (Corrective & Preventive Action / Management Review)", 
+            placeholder="เช่น Re-calibrate ใหม่, เปลี่ยน น้ำยา Lot ใหม่, ทำ Maintenance เครื่องมือ, จัดอบรมเจ้าหน้าที่ผู้ปฏิบัติงาน",
+            height=120
+        )
+
+    if st.button("💾 บันทึกผล EQA และบันทึกการทบทวน", type="primary"):
         if not test_name:
             st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
         else:
@@ -400,7 +470,8 @@ with tab1:
                             'Score_Percent': round(overall_score_pct, 2),
                             'Standard_Score': round(overall_std_score, 2),
                             'Status': eval_status,
-                            'Remark': remark
+                            'Root_Cause': root_cause,
+                            'Review_Action': review_action
                         })
 
             elif "Quantitative" in test_type:
@@ -441,7 +512,8 @@ with tab1:
                         'Score_Percent': np.nan,
                         'Standard_Score': np.nan,
                         'Status': interp,
-                        'Remark': remark
+                        'Root_Cause': root_cause,
+                        'Review_Action': review_action
                     })
 
             elif "Scoring" in test_type:
@@ -487,7 +559,8 @@ with tab1:
                         'Score_Percent': round(overall_pct, 2),
                         'Standard_Score': np.nan,
                         'Status': overall_status,
-                        'Remark': remark
+                        'Root_Cause': root_cause,
+                        'Review_Action': review_action
                     })
 
             else:
@@ -519,13 +592,14 @@ with tab1:
                         'Score_Percent': 100.0 if status == "Excellent" else 0.0,
                         'Standard_Score': np.nan,
                         'Status': status,
-                        'Remark': remark
+                        'Root_Cause': root_cause,
+                        'Review_Action': review_action
                     })
 
             df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
             save_data(df)
             st.cache_data.clear()
-            st.success(f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} รายการเรียบร้อยแล้ว!")
+            st.success(f"บันทึกข้อมูล '{test_name}' และผลการทบทวนรวม {len(new_rows)} รายการเรียบร้อยแล้ว!")
             st.rerun()
 
 with tab2:
@@ -601,17 +675,15 @@ with tab2:
                 st.info("ไม่มีข้อมูลในการแสดงกราฟ")
 
         st.markdown("---")
-        st.subheader("📋 ตารางวิเคราะห์ Sigma Metric และ แนะนำ Westgard Multirule (Biochemistry)")
-        biochem_df = filtered_df[filtered_df['Sigma_Metric'].notnull()]
-        if not biochem_df.empty:
+        st.subheader("📋 รายงานทบทวนรายการที่ไม่ผ่านเกณฑ์ (Root Cause & Review Log)")
+        nc_history = filtered_df[filtered_df['Root_Cause'].notnull() & (filtered_df['Root_Cause'] != '')]
+        if not nc_history.empty:
             st.dataframe(
-                biochem_df[['Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Z_Score', 'Bias_Percent', 'Lab_CV', 'Sigma_Metric', 'Recommended_Multirule', 'Interpretation']], 
+                nc_history[['Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Status', 'Root_Cause', 'Review_Action']], 
                 use_container_width=True
             )
         else:
-            st.info("ยังไม่มีข้อมูลรายการคำนวณ Sigma Metric ในสาขานี้")
-    else:
-        st.info("ยังไม่มีข้อมูลในระบบ")
+            st.info("ยังไม่มีประวัติบันทึกการทบทวนสาเหตุที่ไม่ผ่านในสาขาที่เลือก")
 
 with tab3:
     st.header("ตารางข้อมูลทั้งหมด")
