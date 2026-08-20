@@ -166,9 +166,12 @@ with tab1:
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     if test_name == "UA":
-        st.info("💡 กรอกผลตรวจ ค่า Assigned Value พร้อมคะแนนที่ได้ และคะแนนเต็มในแต่ละพารามิเตอร์ ระบบจะนำคะแนนรวมไปคำนวณ Standard Score = (คะแนนรวมที่ได้ * 4.0) / คะแนนเต็มรวม และประเมินผลตามเกณฑ์")
+        st.info("💡 กรอกผลตรวจ ค่า Assigned Value พร้อมคะแนนที่ได้ และคะแนนเต็มในแต่ละพารามิเตอร์ ระบบจะรวมคะแนนของทุก Sample มารวมกันคำนวณ Standard Score = (คะแนนรวมทุก Sample ที่ได้ * 4.0) / คะแนนเต็มรวมทุก Sample")
         
         ua_results = {}
+        total_obtained_all_samples = 0.0
+        total_max_all_samples = 0.0
+
         for s_idx in range(num_samples):
             sample_label = f"Sample {s_idx + 1}"
             st.markdown(f"##### 🧪 **{sample_label}**")
@@ -198,29 +201,35 @@ with tab1:
                 }
             )
             
-            # คำนวณ Standard Score จากคะแนนที่กรอกจริง
-            tot_obtained = edited_ua['คะแนนที่ได้ (Obtained)'].sum()
-            tot_max = edited_ua['คะแนนเต็ม (Max Score)'].sum()
-            std_score = round((tot_obtained * 4.0) / tot_max, 2) if tot_max > 0 else 0.0
-            score_pct = (tot_obtained / tot_max * 100.0) if tot_max > 0 else 0.0
+            sample_obt = edited_ua['คะแนนที่ได้ (Obtained)'].sum()
+            sample_max = edited_ua['คะแนนเต็ม (Max Score)'].sum()
             
-            # เกณฑ์ประเมิน Scoring Evaluation ตาม Standard Score
-            if std_score >= 4.0:
-                eval_status = "Excellent"
-            elif 3.50 <= std_score < 4.0:
-                eval_status = "Good"
-            elif 3.00 <= std_score < 3.50:
-                eval_status = "Satisfactory"
-            else:
-                eval_status = "Unsatisfactory"
+            total_obtained_all_samples += sample_obt
+            total_max_all_samples += sample_max
+            
+            ua_results[sample_label] = (edited_ua, sample_obt, sample_max)
+            st.caption(f"คะแนนเฉพาะ {sample_label}: {sample_obt:.1f} / {sample_max:.1f}")
 
-            sc_c1, sc_c2, sc_c3 = st.columns(3)
-            sc_c1.metric(f"คะแนนรวม ({sample_label})", f"{tot_obtained:.1f} / {tot_max:.1f}")
-            sc_c2.metric("Standard Score", f"{std_score:.2f}")
-            sc_c3.metric("Scoring Evaluation", eval_status)
-            st.markdown("---")
-            
-            ua_results[sample_label] = (edited_ua, tot_obtained, tot_max, std_score, score_pct, eval_status)
+        # คำนวณ Standard Score รวมทุก Sample
+        overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
+        overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
+
+        # เกณฑ์ประเมิน Scoring Evaluation จาก Standard Score รวม
+        if overall_std_score >= 4.0:
+            eval_status = "Excellent"
+        elif 3.50 <= overall_std_score < 4.0:
+            eval_status = "Good"
+        elif 3.00 <= overall_std_score < 3.50:
+            eval_status = "Satisfactory"
+        else:
+            eval_status = "Unsatisfactory"
+
+        st.markdown("---")
+        st.markdown("#### 🎯 ผลการสรุปคะแนนภาพรวม UA (รวมทุก Sample)")
+        sc_c1, sc_c2, sc_c3 = st.columns(3)
+        sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
+        sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
+        sc_c3.metric("Scoring Evaluation", eval_status)
 
     elif "Quantitative" in test_type:
         st.info("💡 กรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ระบบจะคำนวณ Z-score, Sigma Metric และแนะนำ Westgard Multirule ให้ทันที")
@@ -361,7 +370,7 @@ with tab1:
             new_rows = []
             
             if test_name == "UA":
-                for s_label, (sub_df, tot_obt, tot_m, std_sc, sc_pct, eval_stat) in ua_results.items():
+                for s_label, (sub_df, sub_tot_obt, sub_tot_m) in ua_results.items():
                     for _, r in sub_df.iterrows():
                         p_name = r['พารามิเตอร์ (Parameter)']
                         l_val = str(r['Lab Result'])
@@ -388,9 +397,9 @@ with tab1:
                             'Recommended_Multirule': 'N/A',
                             'Score_Obtained': sub_obt,
                             'Max_Score': sub_max,
-                            'Score_Percent': round(sc_pct, 2),
-                            'Standard_Score': round(std_sc, 2),
-                            'Status': eval_stat,
+                            'Score_Percent': round(overall_score_pct, 2),
+                            'Standard_Score': round(overall_std_score, 2),
+                            'Status': eval_status,
                             'Remark': remark
                         })
 
