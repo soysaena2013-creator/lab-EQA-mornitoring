@@ -47,39 +47,68 @@ TEST_LISTS = {
         "20 WBCT"
     ],
     "Biochemistry": [
-        "Glucose",
+        "GLUCOSE",
         "BUN",
-        "Creatinine",
-        "Uric Acid",
-        "LFT",
-        "Lipid Profile",
-        "Electrolytes",
-        "HbA1c"
+        "CREATININE",
+        "URIC ACID",
+        "CHOLESTEROL",
+        "TRIGLYCERIDE",
+        "HDL",
+        "LDL",
+        "TOTAL PROTEIN",
+        "ALBUMIN",
+        "TOTAL BILIRUBIN",
+        "DIRECT BILIRUBIN",
+        "AST",
+        "ALT",
+        "ALP",
+        "CALCIUM",
+        "MAGNESIUM",
+        "PHOSPHORUS",
+        "Na",
+        "K",
+        "Cl",
+        "CO2",
+        "Hba1c",
+        "Micro-bilirubin",
+        "Troponin I",
+        "BGM STRIP"
     ],
     "Immunology": [
-        "Anti-HIV",
         "HBsAg",
-        "Anti-HCV",
-        "VDRL/RPR",
-        "Dengue NS1/Ab"
-    ],
-    "Microscopy": [
-        "Urinalysis",
-        "Stool Examination",
-        "Stool Occult Blood",
-        "Pregnancy Test"
+        "HBsAb",
+        "anti-HCV",
+        "HIV",
+        "Syphilis",
+        "Leptospira antibody",
+        "Scrub typhus antibody",
+        "Rheumatoid factor",
+        "melioid titer",
+        "COVID-19 TEST",
+        "Influenza A+B TEST",
+        "COVID-19/Influenza A+B test",
+        "COVID-19/Influenza A+B/RSV test"
     ],
     "Microbiology": [
-        "Gram Stain",
-        "AFB Stain",
-        "Culture & Sensitivity",
-        "KOH Preparation"
+        "AFB",
+        "Gram's stain",
+        "TB lamp",
+        "KOH",
+        "Indiaink preperation"
+    ],
+    "Microscopy": [
+        "UA",
+        "Stool examination",
+        "FOB",
+        "UPT",
+        "Methamphetamine screening test",
+        "Marijuana screening test",
+        "Fern test",
+        "Dengue NS1"
     ],
     "Blood bank": [
-        "ABO Grouping",
-        "Rh Grouping",
-        "Antibody Screening",
-        "Crossmatching"
+        "ABO grouping",
+        "Rh grouping"
     ]
 }
 
