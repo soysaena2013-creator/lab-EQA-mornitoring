@@ -8,7 +8,6 @@ st.set_page_config(page_title="EQA & Sigma Metric Tracking", page_icon="🔬", l
 
 DATA_FILE = 'eqa_data.csv'
 
-# ตารางค่า TEa (%) มาตรฐานตามเกณฑ์ CLIA / AACC สำหรับ Biochemistry
 TEA_TABLE = {
     "GLUCOSE": 10.0, "BUN": 9.0, "CREATININE": 15.0, "URIC ACID": 10.0,
     "CHOLESTEROL": 10.0, "TRIGLYCERIDE": 15.0, "HDL": 10.0, "LDL": 12.0,
@@ -52,13 +51,14 @@ TEST_LISTS = {
     "Blood bank": ["ABO grouping", "Rh grouping"]
 }
 
+# ปรับเพิ่มตัวเลือกใน Serology ให้ครอบคลุม Reactive, Non-reactive, Positive, Negative, Equivocal, Inconclusive
 QUAL_OPTIONS = {
     "blood_bank": ["Group A", "Group B", "Group AB", "Group O", "Positive", "Negative"],
-    "serology": ["Reactive", "Non-reactive", "Equivocal"],
-    "pos_neg": ["Positive", "Negative"],
+    "serology": ["Reactive", "Non-reactive", "Positive", "Negative", "Equivocal", "Inconclusive"],
+    "pos_neg": ["Positive", "Negative", "Inconclusive"],
     "stain": ["Found", "Not Found", "Gram Positive Cocci", "Gram Negative Bacilli", "Yeasts Found", "No Organism Found"],
     "titer": ["1:2", "1:4", "1:8", "1:16", "1:32", "1:64", "1:128", "1:256", "Negative"],
-    "general": ["Positive", "Negative", "Reactive", "Non-reactive", "Normal", "Abnormal"]
+    "general": ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal", "Inconclusive", "Normal", "Abnormal"]
 }
 
 COLOR_MAP = {
@@ -173,7 +173,6 @@ with tab1:
             }
         )
 
-        # Real-time Calculation Display for Quantitative / Sigma
         calc_rows = []
         for _, r in edited_df.iterrows():
             l_res, a_val, sd_grp = float(r['Lab Result']), float(r['Assigned Value']), float(r['SD Group'])
@@ -220,7 +219,6 @@ with tab1:
             }
         )
 
-        # Real-time Preview Calculation Display for Qualitative Scoring (Immunology / Serology)
         tot_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
         tot_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
         calc_pct = (tot_obtained / tot_max * 100) if tot_max > 0 else 0.0
