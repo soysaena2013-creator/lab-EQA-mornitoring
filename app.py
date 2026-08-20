@@ -76,6 +76,13 @@ QUAL_OPTIONS = {
     "blood_bank": ["Group A", "Group B", "Group AB", "Group O", "Positive", "Negative"],
     "serology": ["Reactive", "Non-reactive", "Positive", "Negative", "Equivocal", "Inconclusive"],
     "pos_neg": ["Positive", "Negative", "Inconclusive"],
+    "afb": [
+        "Not Found / Negative",
+        "1-9 AFB / 100 fields",
+        "1+",
+        "2+",
+        "3+"
+    ],
     "stain": ["Found", "Not Found", "Yeasts Found", "No Organism Found"],
     "koh": [
         "Not Found / No fungal element seen",
@@ -127,9 +134,11 @@ def get_qual_options_for_test(test_name):
         return QUAL_OPTIONS["serology"]
     elif test_name in ["melioid titer"]:
         return QUAL_OPTIONS["titer"]
+    elif test_name == "AFB":
+        return QUAL_OPTIONS["afb"]
     elif test_name == "KOH":
         return QUAL_OPTIONS["koh"]
-    elif test_name in ["AFB", "Indiaink preperation"]:
+    elif test_name in ["Indiaink preperation"]:
         return QUAL_OPTIONS["stain"]
     elif test_name in ["UPT", "FOB", "COVID-19 TEST", "Dengue NS1", "Methamphetamine screening test", "Marijuana screening test"]:
         return QUAL_OPTIONS["pos_neg"]
