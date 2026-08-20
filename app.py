@@ -80,6 +80,7 @@ QUAL_OPTIONS = {
         "Reactive 1:2", "Reactive 1:4", "Reactive 1:8", "Reactive 1:16", 
         "Reactive 1:32", "Reactive 1:64", "Reactive 1:128", "Reactive 1:256", "Reactive 1:512"
     ],
+    "syphilis_methods": ["RPR", "VDRL", "Syphilis Ab", "TPHA"],
     "pos_neg": ["Positive", "Negative", "Inconclusive"],
     "afb": [
         "Not Found / Negative",
@@ -118,10 +119,13 @@ COLOR_MAP = {
 @st.cache_data
 def load_data():
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
+        df_loaded = pd.read_csv(DATA_FILE)
+        if 'Test_Method' not in df_loaded.columns:
+            df_loaded['Test_Method'] = 'N/A'
+        return df_loaded
     else:
         return pd.DataFrame(columns=[
-            'Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Test_Type',
+            'Cycle', 'Department', 'Test_Name', 'Test_Method', 'Sample_ID', 'Test_Type',
             'Lab_Result', 'Assigned_Value', 'SD_Group', 'Z_Score', 'Interpretation',
             'Lab_SD', 'Lab_CV', 'TEa_Percent', 'Bias_Percent', 'Sigma_Metric', 'Recommended_Multirule',
             'Score_Obtained', 'Max_Score', 'Score_Percent', 'Standard_Score', 'Status', 
@@ -191,6 +195,11 @@ with tab1:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
         test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม") if selected_test == "อื่นๆ (ระบุเอง)" else selected_test
+
+    # เพิ่มช่องเลือกวิธีทดสอบเฉพาะรายการ Syphilis
+    test_method = "N/A"
+    if test_name == "Syphilis":
+        test_method = st.selectbox("วิธีที่ใช้ทดสอบ (Test Method)", QUAL_OPTIONS["syphilis_methods"])
 
     # ตรวจสอบประเภทรายการ Multi-Parameter
     if test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
@@ -695,6 +704,7 @@ with tab1:
                             'Cycle': cycle,
                             'Department': department,
                             'Test_Name': f"Gram's stain ({cat_name})",
+                            'Test_Method': test_method,
                             'Sample_ID': s_label,
                             'Test_Type': 'Qualitative (Gram\'s stain Sub-parameter)',
                             'Lab_Result': l_val,
@@ -731,6 +741,7 @@ with tab1:
                             'Cycle': cycle,
                             'Department': department,
                             'Test_Name': f"{test_name} ({cat_name})",
+                            'Test_Method': test_method,
                             'Sample_ID': s_label,
                             'Test_Type': f'Qualitative ({test_name} Sub-parameter)',
                             'Lab_Result': l_val,
@@ -767,6 +778,7 @@ with tab1:
                             'Cycle': cycle,
                             'Department': department,
                             'Test_Name': f"UA ({p_name})",
+                            'Test_Method': test_method,
                             'Sample_ID': s_label,
                             'Test_Type': 'Qualitative (UA Sub-parameter)',
                             'Lab_Result': l_val,
@@ -802,6 +814,7 @@ with tab1:
                         'Cycle': cycle,
                         'Department': department,
                         'Test_Name': test_name,
+                        'Test_Method': test_method,
                         'Sample_ID': s_id,
                         'Test_Type': test_type,
                         'Lab_Result': l_res,
@@ -835,6 +848,7 @@ with tab1:
                         'Cycle': cycle,
                         'Department': department,
                         'Test_Name': test_name,
+                        'Test_Method': test_method,
                         'Sample_ID': s_id,
                         'Test_Type': test_type,
                         'Lab_Result': l_res,
@@ -868,6 +882,7 @@ with tab1:
                         'Cycle': cycle,
                         'Department': department,
                         'Test_Name': test_name,
+                        'Test_Method': test_method,
                         'Sample_ID': s_id,
                         'Test_Type': test_type,
                         'Lab_Result': l_res,
