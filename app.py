@@ -34,16 +34,55 @@ def save_data(df):
 
 df = load_data()
 
-DEPARTMENTS = ["Biochemistry", "Immunology", "Hematology", "Microscopy", "Microbiology", "Blood bank"]
+DEPARTMENTS = [
+    "Immunology",
+    "Hematology",
+    "Biochemistry",
+    "Microscopy",
+    "Microbiology",
+    "Blood bank"
+]
 
 TEST_LISTS = {
-    "Biochemistry": ["GLUCOSE", "BUN", "CREATININE", "URIC ACID", "CHOLESTEROL", "TRIGLYCERIDE", "HDL", "LDL", "TOTAL PROTEIN", "ALBUMIN", "TOTAL BILIRUBIN", "DIRECT BILIRUBIN", "AST", "ALT", "ALP", "CALCIUM", "MAGNESIUM", "PHOSPHORUS", "Na", "K", "Cl", "CO2", "Hba1c", "Troponin I"],
-    "Hematology": ["CBC", "PT&INR", "DCIP", "Hematocrit", "ESR"],
-    "Immunology": ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Syphilis", "COVID-19 TEST"],
-    "Microbiology": ["AFB", "Gram's stain", "KOH"],
-    "Microscopy": ["UA", "Stool examination", "UPT"],
+    "Hematology": ["CBC", "PT&INR", "DCIP", "Hematocrit", "ESR", "Reticulocyte count", "VCT", "20 WBCT"],
+    "Biochemistry": ["GLUCOSE", "BUN", "CREATININE", "URIC ACID", "CHOLESTEROL", "TRIGLYCERIDE", "HDL", "LDL", "TOTAL PROTEIN", "ALBUMIN", "TOTAL BILIRUBIN", "DIRECT BILIRUBIN", "AST", "ALT", "ALP", "CALCIUM", "MAGNESIUM", "PHOSPHORUS", "Na", "K", "Cl", "CO2", "Hba1c", "Micro-bilirubin", "Troponin I", "BGM STRIP"],
+    "Immunology": ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Syphilis", "Leptospira antibody", "Scrub typhus antibody", "Rheumatoid factor", "melioid titer", "COVID-19 TEST", "Influenza A+B TEST", "COVID-19/Influenza A+B test", "COVID-19/Influenza A+B/RSV test", "Dengue NS1"],
+    "Microbiology": ["AFB", "Gram's stain", "TB lamp", "KOH", "Indiaink preperation"],
+    "Microscopy": ["UA", "Stool examination", "FOB", "UPT", "Methamphetamine screening test", "Marijuana screening test", "Fern test"],
     "Blood bank": ["ABO grouping", "Rh grouping"]
 }
+
+QUAL_OPTIONS = {
+    "blood_bank": ["Group A", "Group B", "Group AB", "Group O", "Positive", "Negative"],
+    "serology": ["Reactive", "Non-reactive", "Equivocal"],
+    "pos_neg": ["Positive", "Negative"],
+    "stain": ["Found", "Not Found", "Gram Positive Cocci", "Gram Negative Bacilli", "Yeasts Found", "No Organism Found"],
+    "titer": ["1:2", "1:4", "1:8", "1:16", "1:32", "1:64", "1:128", "1:256", "Negative"],
+    "general": ["Positive", "Negative", "Reactive", "Non-reactive", "Normal", "Abnormal"]
+}
+
+COLOR_MAP = {
+    'Excellent': '#27ae60',
+    'Good': '#2ecc71',
+    'Satisfactory': '#f1c40f',
+    'Unacceptable': '#e74c3c',
+    'Acceptable': '#2ecc71',
+    'Warning': '#f39c12'
+}
+
+def get_qual_options_for_test(test_name):
+    if test_name in ["ABO grouping", "Rh grouping"]:
+        return QUAL_OPTIONS["blood_bank"]
+    elif test_name in ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Syphilis", "Leptospira antibody", "Scrub typhus antibody"]:
+        return QUAL_OPTIONS["serology"]
+    elif test_name in ["melioid titer"]:
+        return QUAL_OPTIONS["titer"]
+    elif test_name in ["AFB", "Gram's stain", "KOH", "Indiaink preperation"]:
+        return QUAL_OPTIONS["stain"]
+    elif test_name in ["UPT", "FOB", "COVID-19 TEST", "Dengue NS1", "Methamphetamine screening test", "Marijuana screening test"]:
+        return QUAL_OPTIONS["pos_neg"]
+    else:
+        return QUAL_OPTIONS["general"]
 
 def evaluate_westgard_rules(sigma):
     if np.isnan(sigma):
@@ -59,35 +98,48 @@ def evaluate_westgard_rules(sigma):
     else:
         return "Unacceptable (<3.0) - ต้องแก้ไข Root Cause / Re-calibrate ก่อนเลือก Rule"
 
-st.title("🔬 ระบบติดตามผล EQA และคำนวณ Sigma Metric / Multirules")
+st.title("🔬 ระบบติดตามและประเมินผลประสิทธิภาพ EQA & Sigma Metric")
 st.markdown("---")
 
-tab1, tab2, tab3 = st.tabs(["📝 กรอกผล EQA & Sigma Metric", "📊 Dashboard & Multirules", "📋 ประวัติข้อมูล"])
+tab1, tab2, tab3 = st.tabs(["📝 กรอกผล EQA (Multi-Sample)", "📊 Dashboard สรุปผล & Multirules", "📋 ประวัติและ Export ข้อมูล"])
 
 with tab1:
     st.header("แบบฟอร์มบันทึกผล EQA")
     
-    c1, c2, c3 = st.columns(3)
-    with c1:
+    col_c1, col_c2, col_c3 = st.columns(3)
+    with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
-    with c2:
+    with col_c2:
         department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS)
-    with c3:
+    with col_c3:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
         test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม") if selected_test == "อื่นๆ (ระบุเอง)" else selected_test
 
+    if department == "Immunology":
+        default_mode_index = 1
+    elif department in ["Biochemistry", "Hematology"]:
+        default_mode_index = 0
+    else:
+        default_mode_index = 1
+    
     col_m1, col_m2 = st.columns([2, 1])
     with col_m1:
         test_type = st.radio(
             "โหมดการประเมินผล", 
-            ["Quantitative (เชิงปริมาณ + Z-score & Sigma Metric)", "Qualitative with Scoring", "Qualitative Basic"], 
-            index=0 if department == "Biochemistry" else 1, horizontal=True
+            [
+                "Quantitative (เชิงปริมาณ + Z-score & Sigma Metric)", 
+                "Qualitative with Scoring (ประเมินด้วยคะแนน & % ภาพรวม)", 
+                "Qualitative Basic (เทียบ Concordance ตรงๆ)"
+            ], 
+            index=default_mode_index,
+            horizontal=True
         )
     with col_m2:
-        num_samples = st.number_input("จำนวนตัวอย่าง (1-10)", min_value=1, max_value=10, value=1, step=1)
+        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=2, step=1)
 
     st.markdown("---")
+    st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     if "Quantitative" in test_type:
         st.info("💡 กรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ระบบจะคำนวณ Z-score, Sigma Metric และแนะนำ Westgard Multirule ให้ทันที")
@@ -95,7 +147,7 @@ with tab1:
         default_tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
         
         init_data = pd.DataFrame({
-            'รหัสตัวอย่าง': [f"Sample {i+1}" for i in range(num_samples)],
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
             'Lab Result': [100.0] * num_samples,
             'Assigned Value': [100.0] * num_samples,
             'SD Group': [3.0] * num_samples,
@@ -106,19 +158,22 @@ with tab1:
         })
         
         edited_df = st.data_editor(
-            init_data, num_rows="dynamic", use_container_width=True,
+            init_data, 
+            num_rows="dynamic", 
+            use_container_width=True,
             column_config={
-                "Interpretation": st.column_config.SelectboxColumn("Interpretation", options=["Acceptable", "Warning", "Unacceptable", "Action Required"]),
-                "TEa (%)": st.column_config.NumberColumn("TEa (%)", format="%.1f%%"),
-                "Lab %CV": st.column_config.NumberColumn("Lab %CV", format="%.2f%%"),
-                "Lab SD": st.column_config.NumberColumn("Lab SD", format="%.2f"),
-                "SD Group": st.column_config.NumberColumn("SD Group (Peer)", format="%.2f"),
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
                 "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
-                "Assigned Value": st.column_config.NumberColumn("Assigned Value", format="%.2f")
+                "Assigned Value": st.column_config.NumberColumn("Assigned Value", format="%.2f"),
+                "SD Group": st.column_config.NumberColumn("SD Group (Peer)", format="%.2f"),
+                "Lab SD": st.column_config.NumberColumn("Lab SD", format="%.2f"),
+                "Lab %CV": st.column_config.NumberColumn("Lab %CV", format="%.2f%%"),
+                "TEa (%)": st.column_config.NumberColumn("TEa (%)", format="%.1f%%"),
+                "Interpretation": st.column_config.SelectboxColumn("Interpretation", options=["Acceptable", "Warning", "Unacceptable", "Action Required"])
             }
         )
 
-        # Real-time Calculation Display
+        # Real-time Calculation Display for Quantitative / Sigma
         calc_rows = []
         for _, r in edited_df.iterrows():
             l_res, a_val, sd_grp = float(r['Lab Result']), float(r['Assigned Value']), float(r['SD Group'])
@@ -134,76 +189,311 @@ with tab1:
         res_summary = pd.DataFrame(calc_rows)
         
         st.markdown("#### 🎯 ผลการประมวลผล Sigma Metric & Westgard Rule (Real-time)")
-        res_cols = st.columns(len(calc_rows))
+        res_cols = st.columns(min(len(calc_rows), 5))
         for idx, row_res in res_summary.iterrows():
-            with res_cols[min(idx, len(res_cols)-1)]:
-                st.metric(f"{edited_df.iloc[idx]['รหัสตัวอย่าง']} - Z-score", f"{row_res['Z-Score']:.2f}" if not np.isnan(row_res['Z-Score']) else "N/A")
+            with res_cols[idx % len(res_cols)]:
+                st.metric(f"{edited_df.iloc[idx]['รหัสตัวอย่าง (Sample ID)']} - Z-score", f"{row_res['Z-Score']:.2f}" if not np.isnan(row_res['Z-Score']) else "N/A")
                 st.metric("Sigma Metric", f"{row_res['Sigma']:.2f}" if not np.isnan(row_res['Sigma']) else "N/A")
                 st.caption(f"**Rule**: {row_res['Multirule']}")
 
     elif "Scoring" in test_type:
-        st.info("💡 คำนวณคะแนนร้อยละภาพรวมจากทุก Sample")
-        init_data = pd.DataFrame({
-            'รหัสตัวอย่าง': [f"Sample {i+1}" for i in range(num_samples)],
-            'Lab Result': ['Positive'] * num_samples,
-            'Assigned Value': ['Positive'] * num_samples,
-            'คะแนนที่ได้': [100.0] * num_samples,
-            'คะแนนเต็ม': [100.0] * num_samples
-        })
-        edited_df = st.data_editor(init_data, num_rows="dynamic", use_container_width=True)
-
-    remark = st.text_area("บันทึกเพิ่มเติม / สาเหตุกรณีไม่ผ่าน (Root Cause Analysis)", placeholder="ระบุเพิ่มเติม...")
-
-    if st.button("💾 บันทึกข้อมูล EQA", type="primary"):
-        new_rows = []
-        for idx, row in edited_df.iterrows():
-            sample_id = str(row['รหัสตัวอย่าง'])
-            if "Quantitative" in test_type:
-                l_res, a_val, sd_grp = float(row['Lab Result']), float(row['Assigned Value']), float(row['SD Group'])
-                l_sd, l_cv, tea = float(row['Lab SD']), float(row['Lab %CV']), float(row['TEa (%)'])
-                interp = str(row['Interpretation'])
-                
-                z_score = (l_res - a_val) / sd_grp if sd_grp > 0 else np.nan
-                bias_pct = (abs(l_res - a_val) / a_val * 100) if a_val > 0 else np.nan
-                sigma = ((tea - bias_pct) / l_cv) if l_cv > 0 and not np.isnan(bias_pct) else np.nan
-                rule = evaluate_westgard_rules(sigma)
-                
-                new_rows.append({
-                    'Cycle': cycle, 'Department': department, 'Test_Name': test_name, 'Sample_ID': sample_id,
-                    'Test_Type': 'Quantitative', 'Lab_Result': l_res, 'Assigned_Value': a_val,
-                    'SD_Group': sd_grp, 'Z_Score': round(z_score, 2), 'Interpretation': interp,
-                    'Lab_SD': l_sd, 'Lab_CV': l_cv, 'TEa_Percent': tea, 'Bias_Percent': round(bias_pct, 2),
-                    'Sigma_Metric': round(sigma, 2), 'Recommended_Multirule': rule,
-                    'Status': interp, 'Remark': remark
-                })
+        qual_opts = get_qual_options_for_test(test_name)
         
-        df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
-        save_data(df)
-        st.cache_data.clear()
-        st.success(f"บันทึกข้อมูล {test_name} เรียบร้อยแล้ว!")
-        st.rerun()
+        init_data = pd.DataFrame({
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
+            'Lab Result': [qual_opts[0]] * num_samples,
+            'Assigned Value': [qual_opts[0]] * num_samples,
+            'คะแนนที่ได้ (Obtained)': [100.0] * num_samples,
+            'คะแนนเต็ม (Max Score)': [100.0] * num_samples
+        })
+        
+        edited_df = st.data_editor(
+            init_data,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
+                "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
+                "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True),
+                "คะแนนที่ได้ (Obtained)": st.column_config.NumberColumn("คะแนนที่ได้", min_value=0.0, format="%.1f"),
+                "คะแนนเต็ม (Max Score)": st.column_config.NumberColumn("คะแนนเต็ม", min_value=0.1, format="%.1f")
+            }
+        )
+
+        # Real-time Preview Calculation Display for Qualitative Scoring (Immunology / Serology)
+        tot_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
+        tot_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
+        calc_pct = (tot_obtained / tot_max * 100) if tot_max > 0 else 0.0
+
+        if calc_pct == 100.0:
+            calc_status = "Excellent"
+            status_desc = "ดีเยี่ยม (100%)"
+        elif 80.0 <= calc_pct < 100.0:
+            calc_status = "Good"
+            status_desc = "ดี (80.0% - 99.9%)"
+        elif 70.0 <= calc_pct < 80.0:
+            calc_status = "Satisfactory"
+            status_desc = "ยอมรับได้ / ผ่านเกณฑ์ขั้นต่ำ (70.0% - 79.9%)"
+        else:
+            calc_status = "Unacceptable"
+            status_desc = "ต้องปรับปรุง / ไม่ผ่านเกณฑ์ (< 70.0%)"
+
+        st.markdown("#### 🎯 ผลการคำนวณคะแนนภาพรวม (Real-time Calculation)")
+        sc_col1, sc_col2, sc_col3 = st.columns([1, 1, 2])
+        sc_col1.metric("คะแนนรวมที่ได้ / เต็ม", f"{tot_obtained:.1f} / {tot_max:.1f}")
+        sc_col2.metric("คะแนนร้อยละภาพรวม", f"{calc_pct:.2f}%")
+        
+        with sc_col3:
+            if calc_status == "Excellent":
+                st.success(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            elif calc_status == "Good":
+                st.info(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            elif calc_status == "Satisfactory":
+                st.warning(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+            else:
+                st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
+
+    else:
+        st.info("💡 ระบุผลตรวจเทียบกับค่าเฉลย (Concordance)")
+        qual_opts = get_qual_options_for_test(test_name)
+        
+        init_data = pd.DataFrame({
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
+            'Lab Result': [qual_opts[0]] * num_samples,
+            'Assigned Value': [qual_opts[0]] * num_samples
+        })
+        
+        edited_df = st.data_editor(
+            init_data,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "รหัสตัวอย่าง (Sample ID)": st.column_config.TextColumn("รหัสตัวอย่าง (Sample ID)", required=True),
+                "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
+                "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True)
+            }
+        )
+
+    remark = st.text_area("บันทึกเพิ่มเติม / สาเหตุกรณีไม่ผ่าน (Root Cause / Corrective Action)", placeholder="เช่น Reagent Lot No., Calibration Status, Human Error")
+
+    if st.button("💾 บันทึกผล EQA ทั้งหมด", type="primary"):
+        if not test_name:
+            st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
+        else:
+            new_rows = []
+            
+            if "Scoring" in test_type:
+                total_obtained = edited_df['คะแนนที่ได้ (Obtained)'].sum()
+                total_max = edited_df['คะแนนเต็ม (Max Score)'].sum()
+                overall_pct = (total_obtained / total_max * 100) if total_max > 0 else 0.0
+                
+                if overall_pct == 100.0:
+                    overall_status = "Excellent"
+                elif 80.0 <= overall_pct < 100.0:
+                    overall_status = "Good"
+                elif 70.0 <= overall_pct < 80.0:
+                    overall_status = "Satisfactory"
+                else:
+                    overall_status = "Unacceptable"
+
+            for _, row in edited_df.iterrows():
+                sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
+                
+                if "Quantitative" in test_type:
+                    l_res = float(row['Lab Result'])
+                    a_val = float(row['Assigned Value'])
+                    sd_grp = float(row['SD Group'])
+                    l_sd = float(row['Lab SD'])
+                    l_cv = float(row['Lab %CV'])
+                    tea = float(row['TEa (%)'])
+                    interp = str(row['Interpretation'])
+                    
+                    z_score = (l_res - a_val) / sd_grp if sd_grp > 0 else np.nan
+                    bias_pct = (abs(l_res - a_val) / a_val * 100) if a_val > 0 else np.nan
+                    sigma = ((tea - bias_pct) / l_cv) if l_cv > 0 and not np.isnan(bias_pct) else np.nan
+                    rule = evaluate_westgard_rules(sigma)
+                    
+                    new_rows.append({
+                        'Cycle': cycle,
+                        'Department': department,
+                        'Test_Name': test_name,
+                        'Sample_ID': sample_id,
+                        'Test_Type': 'Quantitative',
+                        'Lab_Result': str(l_res),
+                        'Assigned_Value': str(a_val),
+                        'SD_Group': sd_grp,
+                        'Z_Score': round(z_score, 2) if not np.isnan(z_score) else np.nan,
+                        'Interpretation': interp,
+                        'Lab_SD': l_sd,
+                        'Lab_CV': l_cv,
+                        'TEa_Percent': tea,
+                        'Bias_Percent': round(bias_pct, 2) if not np.isnan(bias_pct) else np.nan,
+                        'Sigma_Metric': round(sigma, 2) if not np.isnan(sigma) else np.nan,
+                        'Recommended_Multirule': rule,
+                        'Score_Obtained': np.nan,
+                        'Max_Score': np.nan,
+                        'Score_Percent': np.nan,
+                        'Status': interp,
+                        'Remark': remark
+                    })
+
+                elif "Scoring" in test_type:
+                    lab_res_str = str(row['Lab Result'])
+                    assigned_val_str = str(row['Assigned Value'])
+                    score_obtained = float(row['คะแนนที่ได้ (Obtained)'])
+                    max_score = float(row['คะแนนเต็ม (Max Score)'])
+                    
+                    new_rows.append({
+                        'Cycle': cycle,
+                        'Department': department,
+                        'Test_Name': test_name,
+                        'Sample_ID': sample_id,
+                        'Test_Type': 'Qualitative (Scoring)',
+                        'Lab_Result': lab_res_str,
+                        'Assigned_Value': assigned_val_str,
+                        'SD_Group': np.nan,
+                        'Z_Score': np.nan,
+                        'Interpretation': overall_status,
+                        'Lab_SD': np.nan,
+                        'Lab_CV': np.nan,
+                        'TEa_Percent': np.nan,
+                        'Bias_Percent': np.nan,
+                        'Sigma_Metric': np.nan,
+                        'Recommended_Multirule': 'N/A',
+                        'Score_Obtained': score_obtained,
+                        'Max_Score': max_score,
+                        'Score_Percent': round(overall_pct, 2),
+                        'Status': overall_status,
+                        'Remark': remark
+                    })
+
+                else:
+                    lab_res_str = str(row['Lab Result'])
+                    assigned_val_str = str(row['Assigned Value'])
+                    status = "Excellent" if lab_res_str == assigned_val_str else "Unacceptable"
+                    
+                    new_rows.append({
+                        'Cycle': cycle,
+                        'Department': department,
+                        'Test_Name': test_name,
+                        'Sample_ID': sample_id,
+                        'Test_Type': 'Qualitative',
+                        'Lab_Result': lab_res_str,
+                        'Assigned_Value': assigned_val_str,
+                        'SD_Group': np.nan,
+                        'Z_Score': np.nan,
+                        'Interpretation': status,
+                        'Lab_SD': np.nan,
+                        'Lab_CV': np.nan,
+                        'TEa_Percent': np.nan,
+                        'Bias_Percent': np.nan,
+                        'Sigma_Metric': np.nan,
+                        'Recommended_Multirule': 'N/A',
+                        'Score_Obtained': np.nan,
+                        'Max_Score': np.nan,
+                        'Score_Percent': 100.0 if status == "Excellent" else 0.0,
+                        'Status': status,
+                        'Remark': remark
+                    })
+
+            df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
+            save_data(df)
+            st.cache_data.clear()
+            st.success(f"บันทึกข้อมูล '{test_name}' เรียบร้อยแล้ว! คะแนนภาพรวม: {overall_pct:.2f}% ({overall_status})" if "Scoring" in test_type else f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} ตัวอย่าง เรียบร้อยแล้ว!")
+            st.rerun()
 
 with tab2:
-    st.header("Dashboard วิเคราะห์ Sigma Metric และ แนะนำ Westgard Multirule")
-    if not df.empty and 'Sigma_Metric' in df.columns:
-        biochem_df = df[df['Sigma_Metric'].notnull()]
-        if not biochem_df.empty:
-            fig_sigma = px.bar(
-                biochem_df, x='Test_Name', y='Sigma_Metric', color='Interpretation',
-                title="ระดับ Sigma Metric แยกตามรายการทดสอบ Biochemistry",
-                hover_data=['Cycle', 'Sample_ID', 'Bias_Percent', 'Lab_CV', 'Recommended_Multirule']
+    st.header("Dashboard สรุปผลและวิเคราะห์ประสิทธิภาพ")
+    if not df.empty:
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            selected_cycle = st.multiselect("เลือกรอบการทดสอบ", options=df['Cycle'].unique(), default=df['Cycle'].unique())
+        with col_f2:
+            selected_dept = st.multiselect("เลือกสาขา", options=df['Department'].unique(), default=df['Department'].unique())
+
+        filtered_df = df[(df['Cycle'].isin(selected_cycle)) & (df['Department'].isin(selected_dept))]
+
+        total_tests = len(filtered_df)
+        
+        excellent_cnt = len(filtered_df[filtered_df['Status'] == 'Excellent'])
+        good_cnt = len(filtered_df[filtered_df['Status'] == 'Good'])
+        sat_cnt = len(filtered_df[filtered_df['Status'] == 'Satisfactory'])
+        unacc_cnt = len(filtered_df[filtered_df['Status'] == 'Unacceptable'])
+        
+        acc_legacy_cnt = len(filtered_df[filtered_df['Status'] == 'Acceptable'])
+        passed_cnt = excellent_cnt + good_cnt + sat_cnt + acc_legacy_cnt
+        pass_rate = (passed_cnt / total_tests * 100) if total_tests > 0 else 0.0
+
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("จำนวนตัวอย่างทั้งหมด", f"{total_tests} ตัวอย่าง")
+        m2.metric("ผ่านเกณฑ์ภาพรวม", f"{passed_cnt}", f"{pass_rate:.1f}%")
+        m3.metric("Excellent (100%)", f"{excellent_cnt}")
+        m4.metric("Good / Satisfactory", f"{good_cnt + sat_cnt}")
+        m5.metric("Unacceptable / Error", f"{unacc_cnt}")
+
+        st.markdown("---")
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.subheader("สัดส่วนผลการประเมินแยกตามสาขา")
+            dept_summary = filtered_df.groupby(['Department', 'Status']).size().reset_index(name='Count')
+            fig_bar = px.bar(
+                dept_summary, x='Department', y='Count', color='Status',
+                color_discrete_map=COLOR_MAP,
+                barmode='group', text='Count'
             )
-            fig_sigma.add_hline(y=6.0, line_dash="dot", line_color="green", annotation_text="World Class (6σ)")
-            fig_sigma.add_hline(y=3.0, line_dash="dash", line_color="red", annotation_text="Minimum Acceptable (3σ)")
-            st.plotly_chart(fig_sigma, use_container_width=True)
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        with col_g2:
+            st.subheader("แนวโน้ม Z-Score / คะแนน % ภาพรวม")
+            quant_df = filtered_df[filtered_df['Test_Type'] == 'Quantitative'].dropna(subset=['Z_Score'])
+            scoring_df = filtered_df[filtered_df['Score_Percent'].notnull()]
+
+            if not quant_df.empty:
+                fig_sdi = px.scatter(
+                    quant_df, x='Sample_ID', y='Z_Score', color='Status', hover_name='Test_Name',
+                    color_discrete_map=COLOR_MAP,
+                    hover_data=['Cycle', 'Department', 'Test_Name', 'Lab_Result', 'Assigned_Value', 'Sigma_Metric'],
+                    title="Z-Score Distribution (Quantitative: ±2 ช่วงยอมรับได้)"
+                )
+                fig_sdi.add_hline(y=2.0, line_dash="dash", line_color="orange")
+                fig_sdi.add_hline(y=-2.0, line_dash="dash", line_color="orange")
+                st.plotly_chart(fig_sdi, use_container_width=True)
             
-            st.subheader("📋 ตารางแนะนำการเลือกใช้ QC Multirules ตามค่า Sigma")
-            st.dataframe(biochem_df[['Cycle', 'Test_Name', 'Sample_ID', 'Z_Score', 'Bias_Percent', 'Lab_CV', 'Sigma_Metric', 'Recommended_Multirule', 'Interpretation']], use_container_width=True)
+            if not scoring_df.empty:
+                fig_score = px.bar(
+                    scoring_df, x='Test_Name', y='Score_Percent', color='Status',
+                    color_discrete_map=COLOR_MAP,
+                    hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score'],
+                    title="คะแนนประเมินร้อยละภาพรวม (%) - Qualitative / Scoring"
+                )
+                fig_score.add_hline(y=100.0, line_dash="dot", line_color="green", annotation_text="Excellent (100%)")
+                fig_score.add_hline(y=80.0, line_dash="dash", line_color="#2ecc71", annotation_text="Good (80%)")
+                fig_score.add_hline(y=70.0, line_dash="dash", line_color="orange", annotation_text="Satisfactory (70%)")
+                st.plotly_chart(fig_score, use_container_width=True)
+
+            if quant_df.empty and scoring_df.empty:
+                st.info("ไม่มีข้อมูลในการแสดงกราฟ")
+
+        st.markdown("---")
+        st.subheader("📋 ตารางวิเคราะห์ Sigma Metric และ แนะนำ Westgard Multirule (Biochemistry)")
+        biochem_df = filtered_df[filtered_df['Sigma_Metric'].notnull()]
+        if not biochem_df.empty:
+            st.dataframe(
+                biochem_df[['Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Z_Score', 'Bias_Percent', 'Lab_CV', 'Sigma_Metric', 'Recommended_Multirule', 'Interpretation']], 
+                use_container_width=True
+            )
         else:
-            st.info("ยังไม่มีข้อมูล Quantitative / Sigma Metric")
+            st.info("ยังไม่มีข้อมูลรายการคำนวณ Sigma Metric ในสาขานี้")
     else:
         st.info("ยังไม่มีข้อมูลในระบบ")
 
 with tab3:
-    st.header("ตารางข้อมูลประวัติทั้งหมด")
+    st.header("ตารางข้อมูลทั้งหมด")
     st.dataframe(df, use_container_width=True)
+    csv_data = df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Download Data as CSV",
+        data=csv_data,
+        file_name='eqa_tracking_summary.csv',
+        mime='text/csv'
+    )
