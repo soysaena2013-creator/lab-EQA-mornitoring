@@ -39,9 +39,29 @@ UA_OPTIONS = {
     "Blood": ["Negative", "Trace", "1+", "2+", "3+", "4+"]
 }
 
-# ตัวเลือกสำหรับ Gram's Stain ย่อย
-GRAM_REACTION_OPTIONS = ["Gram-positive", "Gram-negative", "Gram-variable", "No organism seen"]
-GRAM_MORPHOLOGY_OPTIONS = ["Cocci", "Diplococci", "Bacilli / Rods", "Coccobacilli", "Spirilla / Curved rods", "Filamentous rods", "Yeast cells / Budding yeast", "No organism seen"]
+# รายการย่อยสำหรับ CBC (ส่วนที่ 1)
+CBC_PART1_PARAMS = [
+    "RBC count (10^6/ul)", "WBC count (10^3/ul)", "PLT count (10^3/ul)",
+    "Hemoglobin concentration (g/dl)", "Hematocrit (%)", "MCV (fl)", "MCH (pg)", "MCHC (g/dl)"
+]
+
+# รายการย่อยสำหรับ Slide Smear (ส่วนที่ 2.1: WBC differential count)
+CBC_SLIDE_WBC_PARAMS = [
+    "neutrophils", "lymphocytes", "eosinophils", "basophils", "monocytes",
+    "atypical lymphocytes", "promyelocytes", "myelocytes", "metamyelocytes",
+    "band-form neutrophils", "plasma cells", "blast cells", "NRBC/100WBC"
+]
+
+# รายการย่อยสำหรับ Slide Smear (ส่วนที่ 2.2: RBC morphology)
+CBC_SLIDE_RBC_PARAMS = [
+    "normocytes", "microcytosis", "macrocytosis", "hypochromia", "polychromasia",
+    "target cell", "acanthocyte", "burr cell", "ovalocyte", "schistocyte",
+    "spherocyte", "stomatocyte", "tear drop cell", "rouleaux formation",
+    "agglutination", "cabot's ring", "basophilic stippling", "howell jolly bodies"
+]
+
+# รายการย่อยสำหรับ Slide Smear (ส่วนที่ 2.3: Platelet estimation)
+CBC_SLIDE_PLT_PARAMS = ["decreased", "adequate", "increased"]
 
 # ตัวเลือกเชื้อและระยะสำหรับ Parasite & Stool
 SPECIES_OPTIONS = [
@@ -108,6 +128,7 @@ COLOR_MAP = {
     'Good': '#2ecc71',
     'Satisfactory': '#f1c40f',
     'Unsatisfactory': '#e74c3c',
+    'Serious problem': '#c0392b',
     'Unacceptable': '#e74c3c',
     'Acceptable': '#2ecc71',
     'Warning': '#f39c12'
@@ -135,6 +156,35 @@ def load_data():
 def save_data(df):
     df.to_csv(DATA_FILE, index=False)
     st.cache_data.clear()
+
+def evaluate_di_performance(di):
+    if np.isnan(di):
+        return "N/A"
+    di_abs = abs(di)
+    if di_abs <= 0.5:
+        return "Excellent"
+    elif 0.5 < di_abs <= 1.0:
+        return "Good"
+    elif 1.0 < di_abs <= 2.0:
+        return "Satisfactory"
+    elif 2.0 < di_abs <= 3.0:
+        return "Unsatisfactory"
+    else:
+        return "Serious problem"
+
+def evaluate_score_performance(score):
+    if np.isnan(score):
+        return "N/A"
+    if score >= 3.5:
+        return "Excellent"
+    elif 3.0 <= score < 3.5:
+        return "Good"
+    elif 2.5 <= score < 3.0:
+        return "Satisfactory"
+    elif 1.5 <= score < 2.5:
+        return "Unsatisfactory"
+    else:
+        return "Serious problem"
 
 def get_qual_options_for_test(test_name):
     if test_name in ["ABO grouping", "Rh grouping"]:
@@ -190,7 +240,7 @@ with tab1:
     with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
     with col_c2:
-        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Immunology") if "Immunology" in DEPARTMENTS else 0)
+        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Hematology") if "Hematology" in DEPARTMENTS else 0)
     with col_c3:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
@@ -202,7 +252,10 @@ with tab1:
         test_method = st.selectbox("วิธีที่ใช้ทดสอบ (Test Method)", QUAL_OPTIONS["syphilis_methods"])
 
     # ตรวจสอบประเภทรายการ Multi-Parameter
-    if test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
+    if test_name == "CBC":
+        test_type = "CBC Multi-Part Scoring"
+        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
+    elif test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
         test_type = f"{test_name} Multi-Parameter Scoring"
         num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
     else:
@@ -227,8 +280,218 @@ with tab1:
 
     nc_items = []
 
+    # 0. กรณีพิเศษ CBC (แบ่งเป็นส่วนที่ 1 และส่วนที่ 2: Slide smear 3 ส่วนย่อย)
+    if test_name == "CBC":
+        st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC (อัตโนมัติ 8 รายการ) และ ส่วนที่ 2 Slide Smear (3 ส่วนย่อย)")
+        
+        cbc_results_store = []
+        
+        for s_idx in range(num_samples):
+            st.markdown(f"##### 🩸 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"cbc_sid_{s_idx}")
+            
+            # --- ส่วนที่ 1: CBC ---
+            st.markdown("---")
+            st.markdown("###### **ส่วนที่ 1: CBC (8 รายการ)**")
+            part1_data = []
+            for param in CBC_PART1_PARAMS:
+                part1_data.append({
+                    "Parameter": param,
+                    "Lab Result": 0.0,
+                    "Lab DI": 0.0
+                })
+            df_part1 = pd.DataFrame(part1_data)
+            
+            edited_part1 = st.data_editor(
+                df_part1,
+                key=f"cbc_p1_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
+                    "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
+                    "Lab DI": st.column_config.NumberColumn("Lab DI (Deviation Index)", format="%.2f")
+                }
+            )
+            
+            # คำนวณ Lab Performance จาก Lab DI สำหรับส่วนที่ 1
+            for _, r in edited_part1.iterrows():
+                p_name = r["Parameter"]
+                l_res = float(r["Lab Result"])
+                di_val = float(r["Lab DI"])
+                perf = evaluate_di_performance(di_val)
+                
+                cbc_results_store.append({
+                    'Sample_ID': sample_id_input,
+                    'Section': 'Part 1: CBC',
+                    'Item_Name': p_name,
+                    'Lab_Result': str(l_res),
+                    'Assigned_Value': 'N/A',
+                    'Lab_DI': di_val,
+                    'Mean': np.nan,
+                    'SD': np.nan,
+                    'Performance': perf
+                })
+                
+                if perf in ["Unsatisfactory", "Serious problem"]:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - CBC ({p_name})",
+                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
+                        "ค่าเป้าหมาย (Assigned Value)": f"DI: {di_val:.2f}",
+                        "สถานะปัญหา": f"Performance: {perf}"
+                    })
+
+            # --- ส่วนที่ 2: Slide smear ---
+            st.markdown("---")
+            st.markdown("###### **ส่วนที่ 2: Slide Smear**")
+            
+            # ส่วนที่ 2.1 WBC differential count
+            st.markdown("**2.1 WBC differential count** (กรอก Lab Result, Lab DI, Mean, SD)")
+            p21_data = []
+            for param in CBC_SLIDE_WBC_PARAMS:
+                p21_data.append({
+                    "Parameter": param,
+                    "Lab Result": 0.0,
+                    "Lab DI": 0.0,
+                    "Mean": 0.0,
+                    "SD": 0.0
+                })
+            df_p21 = pd.DataFrame(p21_data)
+            
+            edited_p21 = st.data_editor(
+                df_p21,
+                key=f"cbc_p21_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
+                    "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
+                    "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f"),
+                    "Mean": st.column_config.NumberColumn("Mean", format="%.2f"),
+                    "SD": st.column_config.NumberColumn("SD", format="%.2f")
+                }
+            )
+            
+            for _, r in edited_p21.iterrows():
+                p_name = r["Parameter"]
+                l_res = float(r["Lab Result"])
+                di_val = float(r["Lab DI"])
+                mean_val = float(r["Mean"])
+                sd_val = float(r["SD"])
+                perf = evaluate_di_performance(di_val)
+                
+                cbc_results_store.append({
+                    'Sample_ID': sample_id_input,
+                    'Section': 'Part 2.1: WBC diff',
+                    'Item_Name': p_name,
+                    'Lab_Result': str(l_res),
+                    'Assigned_Value': 'N/A',
+                    'Lab_DI': di_val,
+                    'Mean': mean_val,
+                    'SD': sd_val,
+                    'Performance': perf
+                })
+                
+                if perf in ["Unsatisfactory", "Serious problem"]:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - WBC diff ({p_name})",
+                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
+                        "ค่าเป้าหมาย (Assigned Value)": f"DI: {di_val:.2f}",
+                        "สถานะปัญหา": f"Performance: {perf}"
+                    })
+
+            # ส่วนที่ 2.2 RBC morphology
+            st.markdown("**2.2 RBC morphology** (กรอก Lab Result และ Assigned Value เพื่อคิด Score รวมและ Performance)")
+            p22_data = []
+            for param in CBC_SLIDE_RBC_PARAMS:
+                p22_data.append({
+                    "Parameter": param,
+                    "Lab Result": "Normal",
+                    "Assigned Value": "Normal",
+                    "Score (0-4)": 4.0
+                })
+            df_p22 = pd.DataFrame(p22_data)
+            
+            edited_p22 = st.data_editor(
+                df_p22,
+                key=f"cbc_p22_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
+                    "Lab Result": st.column_config.TextColumn("Lab Result"),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value"),
+                    "Score (0-4)": st.column_config.NumberColumn("Score", min_value=0.0, max_value=4.0, format="%.1f")
+                }
+            )
+            
+            p22_avg_score = edited_p22["Score (0-4)"].mean() if not edited_p22.empty else 0.0
+            p22_perf = evaluate_score_performance(p22_avg_score)
+            st.info(f"📊 คะแนนเฉลี่ย RBC morphology ของ {sample_id_input}: **{p22_avg_score:.2f}** | Performance: **{p22_perf}**")
+            
+            for _, r in edited_p22.iterrows():
+                p_name = r["Parameter"]
+                l_res = str(r["Lab Result"])
+                a_val = str(r["Assigned Value"])
+                sc = float(r["Score (0-4)"])
+                
+                cbc_results_store.append({
+                    'Sample_ID': sample_id_input,
+                    'Section': 'Part 2.2: RBC morphology',
+                    'Item_Name': p_name,
+                    'Lab_Result': l_res,
+                    'Assigned_Value': a_val,
+                    'Lab_DI': np.nan,
+                    'Mean': np.nan,
+                    'SD': np.nan,
+                    'Performance': p22_perf
+                })
+
+            # ส่วนที่ 2.3 Platelet estimation
+            st.markdown("**2.3 Platelet estimation** (กรอก Lab Result และ Assigned Value เพื่อคิด Score รวมและ Performance)")
+            p23_data = []
+            for param in CBC_SLIDE_PLT_PARAMS:
+                p23_data.append({
+                    "Parameter": param,
+                    "Lab Result": "adequate",
+                    "Assigned Value": "adequate",
+                    "Score (0-4)": 4.0
+                })
+            df_p23 = pd.DataFrame(p23_data)
+            
+            edited_p23 = st.data_editor(
+                df_p23,
+                key=f"cbc_p23_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
+                    "Lab Result": st.column_config.TextColumn("Lab Result"),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value"),
+                    "Score (0-4)": st.column_config.NumberColumn("Score", min_value=0.0, max_value=4.0, format="%.1f")
+                }
+            )
+            
+            p23_avg_score = edited_p23["Score (0-4)"].mean() if not edited_p23.empty else 0.0
+            p23_perf = evaluate_score_performance(p23_avg_score)
+            st.info(f"📊 คะแนนเฉลี่ย Platelet estimation ของ {sample_id_input}: **{p23_avg_score:.2f}** | Performance: **{p23_perf}**")
+            
+            for _, r in edited_p23.iterrows():
+                p_name = r["Parameter"]
+                l_res = str(r["Lab Result"])
+                a_val = str(r["Assigned Value"])
+                sc = float(r["Score (0-4)"])
+                
+                cbc_results_store.append({
+                    'Sample_ID': sample_id_input,
+                    'Section': 'Part 2.3: Platelet estimation',
+                    'Item_Name': p_name,
+                    'Lab_Result': l_res,
+                    'Assigned_Value': a_val,
+                    'Lab_DI': np.nan,
+                    'Mean': np.nan,
+                    'SD': np.nan,
+                    'Performance': p23_perf
+                })
+
     # 1. กรณี Gram's stain
-    if test_name == "Gram's stain":
+    elif test_name == "Gram's stain":
         st.info("💡 **Gram's stain**: กรอกผลแยกตาม 2 หัวข้อย่อย ได้แก่ การติดสี (Gram Reaction) และ รูปร่างของแบคทีเรีย (Morphology)")
         
         gram_results = {}
@@ -690,8 +953,38 @@ with tab1:
         else:
             new_rows = []
             
+            # บันทึก CBC
+            if test_name == "CBC":
+                for item in cbc_results_store:
+                    new_rows.append({
+                        'Cycle': cycle,
+                        'Department': department,
+                        'Test_Name': f"CBC - {item['Section']} ({item['Item_Name']})",
+                        'Test_Method': test_method,
+                        'Sample_ID': item['Sample_ID'],
+                        'Test_Type': 'CBC Detailed Breakdown',
+                        'Lab_Result': item['Lab_Result'],
+                        'Assigned_Value': item['Assigned_Value'],
+                        'SD_Group': np.nan,
+                        'Z_Score': np.nan,
+                        'Interpretation': item['Performance'],
+                        'Lab_SD': item['SD'] if not np.isnan(item['SD']) else np.nan,
+                        'Lab_CV': np.nan,
+                        'TEa_Percent': np.nan,
+                        'Bias_Percent': np.nan,
+                        'Sigma_Metric': np.nan,
+                        'Recommended_Multirule': 'N/A',
+                        'Score_Obtained': item['Lab_DI'] if not np.isnan(item['Lab_DI']) else np.nan,
+                        'Max_Score': np.nan,
+                        'Score_Percent': np.nan,
+                        'Standard_Score': np.nan,
+                        'Status': item['Performance'],
+                        'Root_Cause': root_cause,
+                        'Review_Action': review_action
+                    })
+
             # บันทึก Gram's stain
-            if test_name == "Gram's stain":
+            elif test_name == "Gram's stain":
                 for s_label, (sub_df, sub_tot_obt, sub_tot_m) in gram_results.items():
                     for _, r in sub_df.iterrows():
                         cat_name = str(r['หัวข้อย่อย'])
