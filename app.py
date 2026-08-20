@@ -75,6 +75,11 @@ TEST_LISTS = {
 QUAL_OPTIONS = {
     "blood_bank": ["Group A", "Group B", "Group AB", "Group O", "Positive", "Negative"],
     "serology": ["Reactive", "Non-reactive", "Positive", "Negative", "Equivocal", "Inconclusive"],
+    "syphilis": [
+        "Reactive", "Non-reactive", "Positive", "Negative", "Equivocal", "Inconclusive",
+        "Reactive 1:2", "Reactive 1:4", "Reactive 1:8", "Reactive 1:16", 
+        "Reactive 1:32", "Reactive 1:64", "Reactive 1:128", "Reactive 1:256", "Reactive 1:512"
+    ],
     "pos_neg": ["Positive", "Negative", "Inconclusive"],
     "afb": [
         "Not Found / Negative",
@@ -130,7 +135,9 @@ def save_data(df):
 def get_qual_options_for_test(test_name):
     if test_name in ["ABO grouping", "Rh grouping"]:
         return QUAL_OPTIONS["blood_bank"]
-    elif test_name in ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Syphilis", "Leptospira antibody", "Scrub typhus antibody"]:
+    elif test_name == "Syphilis":
+        return QUAL_OPTIONS["syphilis"]
+    elif test_name in ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Leptospira antibody", "Scrub typhus antibody"]:
         return QUAL_OPTIONS["serology"]
     elif test_name in ["melioid titer"]:
         return QUAL_OPTIONS["titer"]
@@ -179,7 +186,7 @@ with tab1:
     with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
     with col_c2:
-        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Microbiology") if "Microbiology" in DEPARTMENTS else 0)
+        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Immunology") if "Immunology" in DEPARTMENTS else 0)
     with col_c3:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
