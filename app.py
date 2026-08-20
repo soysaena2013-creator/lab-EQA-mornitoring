@@ -162,18 +162,18 @@ with tab1:
     nc_items = []
 
     # ==========================================
-    # กรณี 1: Blood parasite (มี 3 รายการย่อย สามารถเพิ่มหลายคำตอบได้)
+    # กรณี 1: Blood parasite (สามารถแก้ไข Sample ID ได้)
     # ==========================================
     if test_name == "Blood parasite":
-        st.info("💡 **Blood parasite**: กรอกผลตรวจ 3 หัวข้อ (ตระกูล/สายพันธุ์, ระยะที่พบ, %Parasitemia) โดยสามารถเพิ่มแถวคำตอบได้มากกว่า 1 รายการต่อตัวอย่าง ระบบจะรวมคะแนนทุกคำตอบทุก Sample แล้วคำนวณ Standard Score")
+        st.info("💡 **Blood parasite**: กรอก/แก้ไขชื่อ Sample ID และผลตรวจ 3 หัวข้อ (ตระกูล/สายพันธุ์, ระยะที่พบ, %Parasitemia) โดยเพิ่ม/แก้ไขได้ ระบบจะรวมคะแนนคำนวณ Standard Score")
         
         bp_results = {}
         total_obtained_all_samples = 0.0
         total_max_all_samples = 0.0
 
         for s_idx in range(num_samples):
-            sample_label = f"Sample {s_idx + 1}"
-            st.markdown(f"##### 🩸 **{sample_label}**")
+            st.markdown(f"##### 🩸 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"bp_sid_key_{s_idx}")
             
             init_bp_data = pd.DataFrame([
                 {
@@ -229,14 +229,14 @@ with tab1:
                 cat = str(r['หัวข้อย่อย (Category)'])
                 if l_res != a_val or obt_sc < max_sc:
                     nc_items.append({
-                        "รายการ/Sample": f"{sample_label} - Blood parasite ({cat})",
+                        "รายการ/Sample": f"{sample_id_input} - Blood parasite ({cat})",
                         "ผลตรวจห้องปฏิบัติการ": l_res,
                         "ค่าเป้าหมาย (Assigned Value)": a_val,
                         "สถานะปัญหา": f"Mismatch / คะแนนได้ {obt_sc}/{max_sc}"
                     })
 
-            bp_results[sample_label] = (edited_bp, s_obt, s_max)
-            st.caption(f"คะแนนเฉพาะ {sample_label}: {s_obt:.1f} / {s_max:.1f}")
+            bp_results[sample_id_input] = (edited_bp, s_obt, s_max)
+            st.caption(f"คะแนนเฉพาะ {sample_id_input}: {s_obt:.1f} / {s_max:.1f}")
 
         overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
         overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
@@ -258,18 +258,18 @@ with tab1:
         sc_c3.metric("Scoring Evaluation", eval_status)
 
     # ==========================================
-    # กรณี 2: UA (10 Sub-parameters)
+    # กรณี 2: UA (แก้ไข Sample ID ได้)
     # ==========================================
     elif test_name == "UA":
-        st.info("💡 กรอกผลตรวจ ค่า Assigned Value พร้อมคะแนนที่ได้ และคะแนนเต็มในแต่ละพารามิเตอร์ ระบบจะรวมคะแนนของทุก Sample มารวมกันคำนวณ Standard Score")
+        st.info("💡 สามารถแก้ไขชื่อ Sample ID และป้อนค่า Assigned Value พร้อมคะแนนในแต่ละพารามิเตอร์เพื่อคำนวณ Standard Score")
         
         ua_results = {}
         total_obtained_all_samples = 0.0
         total_max_all_samples = 0.0
 
         for s_idx in range(num_samples):
-            sample_label = f"Sample {s_idx + 1}"
-            st.markdown(f"##### 🧪 **{sample_label}**")
+            st.markdown(f"##### 🧪 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"ua_sid_key_{s_idx}")
             
             ua_data = []
             for param in UA_PARAMETERS:
@@ -307,14 +307,14 @@ with tab1:
                 obt_sc, max_sc = float(r['คะแนนที่ได้ (Obtained)']), float(r['คะแนนเต็ม (Max Score)'])
                 if l_res != a_val or obt_sc < max_sc:
                     nc_items.append({
-                        "รายการ/Sample": f"{sample_label} - UA ({r['พารามิเตอร์ (Parameter)']})",
+                        "รายการ/Sample": f"{sample_id_input} - UA ({r['พารามิเตอร์ (Parameter)']})",
                         "ผลตรวจห้องปฏิบัติการ": l_res,
                         "ค่าเป้าหมาย (Assigned Value)": a_val,
                         "สถานะปัญหา": "Mismatch / คะแนนไม่เต็ม"
                     })
 
-            ua_results[sample_label] = (edited_ua, sample_obt, sample_max)
-            st.caption(f"คะแนนเฉพาะ {sample_label}: {sample_obt:.1f} / {sample_max:.1f}")
+            ua_results[sample_id_input] = (edited_ua, sample_obt, sample_max)
+            st.caption(f"คะแนนเฉพาะ {sample_id_input}: {sample_obt:.1f} / {sample_max:.1f}")
 
         overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
         overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
@@ -336,7 +336,7 @@ with tab1:
         sc_c3.metric("Scoring Evaluation", eval_status)
 
     elif "Quantitative" in test_type:
-        st.info("💡 กรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ระบบจะคำนวณ Z-score, Sigma Metric และแนะนำ Westgard Multirule ให้ทันที")
+        st.info("💡 สามารถแก้ไขชื่อ Sample ID และกรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ได้ในตาราง")
         default_tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
         
         init_data = pd.DataFrame({
@@ -465,8 +465,11 @@ with tab1:
             else:
                 st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
 
+    # ==========================================
+    # กรณี 3: Qualitative Basic รวมถึง Urine sediment by photo observation (แก้ไข Sample ID ได้)
+    # ==========================================
     else:
-        st.info("💡 ระบุผลตรวจเทียบกับค่าเฉลย (Concordance)")
+        st.info("💡 สามารถคลิกในช่อง 'รหัสตัวอย่าง (Sample ID)' เพื่อเปลี่ยนชื่อ/รหัส Sample ได้โดยตรง")
         qual_opts = get_qual_options_for_test(test_name)
         
         init_data = pd.DataFrame({
