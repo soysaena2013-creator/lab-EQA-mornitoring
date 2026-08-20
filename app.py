@@ -20,25 +20,6 @@ TEA_TABLE = {
     "K": 0.5, "Cl": 5.0, "Hba1c": 6.0, "DEFAULT": 10.0
 }
 
-# พารามิเตอร์ย่อยสำหรับ UA 10 รายการ
-UA_PARAMETERS = [
-    "Specific Gravity", "pH", "Leukocytes", "Nitrite", 
-    "Protein", "Glucose", "Ketone", "Urobilinogen", "Bilirubin", "Blood"
-]
-
-UA_OPTIONS = {
-    "Specific Gravity": ["1.000", "1.005", "1.010", "1.015", "1.020", "1.025", "1.030", "1.035"],
-    "pH": ["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0"],
-    "Leukocytes": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Nitrite": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Protein": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Glucose": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Ketone": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Urobilinogen": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Bilirubin": ["Negative", "Trace", "1+", "2+", "3+", "4+"],
-    "Blood": ["Negative", "Trace", "1+", "2+", "3+", "4+"]
-}
-
 # รายการย่อยสำหรับ CBC (ส่วนที่ 1)
 CBC_PART1_PARAMS = [
     "RBC count (10^6/ul)", "WBC count (10^3/ul)", "PLT count (10^3/ul)",
@@ -62,16 +43,6 @@ CBC_SLIDE_RBC_PARAMS = [
 
 # รายการย่อยสำหรับ Slide Smear (ส่วนที่ 2.3: Platelet estimation)
 CBC_SLIDE_PLT_PARAMS = ["decreased", "adequate", "increased"]
-
-SPECIES_OPTIONS = [
-    "Plasmodium falciparum", "Plasmodium vivax", "Plasmodium malariae", "Plasmodium ovale", "Plasmodium knowlesi",
-    "Entamoeba histolytica", "Entamoeba coli", "Giardia lamblia", "Ascaris lumbricoides", "Hookworm", "Strongyloides stercoralis",
-    "Trichuris trichiura", "Opisthorchis viverrini", "Taenia spp.", "Not Found / Negative"
-]
-
-STAGE_OPTIONS = [
-    "Ring form", "Trophozoite", "Schizont", "Gametocyte", "Cyst", "Trophozoite (Ameba)", "Egg / Ovum", "Larva", "Adult worm", "Not Found"
-]
 
 DEPARTMENTS = [
     "Immunology",
@@ -109,17 +80,6 @@ QUAL_OPTIONS = {
     ],
     "titer": ["1:2", "1:4", "1:8", "1:16", "1:32", "1:64", "1:128", "1:256", "Negative"],
     "general": ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal", "Inconclusive", "Normal", "Abnormal"]
-}
-
-COLOR_MAP = {
-    'Excellent': '#27ae60',
-    'Good': '#2ecc71',
-    'Satisfactory': '#f1c40f',
-    'Unsatisfactory': '#e74c3c',
-    'Serious problem': '#c0392b',
-    'Unacceptable': '#e74c3c',
-    'Acceptable': '#2ecc71',
-    'Warning': '#f39c12'
 }
 
 # ---------------------------------------------------------
@@ -174,40 +134,6 @@ def evaluate_score_performance(score):
     else:
         return "Serious problem"
 
-def get_qual_options_for_test(test_name):
-    if test_name in ["ABO grouping", "Rh grouping"]:
-        return QUAL_OPTIONS["blood_bank"]
-    elif test_name == "Syphilis":
-        return QUAL_OPTIONS["syphilis"]
-    elif test_name in ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Leptospira antibody", "Scrub typhus antibody"]:
-        return QUAL_OPTIONS["serology"]
-    elif test_name in ["melioid titer"]:
-        return QUAL_OPTIONS["titer"]
-    elif test_name == "AFB":
-        return QUAL_OPTIONS["afb"]
-    elif test_name == "KOH":
-        return QUAL_OPTIONS["koh"]
-    elif test_name in ["Indiaink preperation"]:
-        return QUAL_OPTIONS["stain"]
-    elif test_name in ["UPT", "FOB", "COVID-19 TEST", "Dengue NS1", "Methamphetamine screening test", "Marijuana screening test"]:
-        return QUAL_OPTIONS["pos_neg"]
-    else:
-        return QUAL_OPTIONS["general"]
-
-def evaluate_westgard_rules(sigma):
-    if np.isnan(sigma):
-        return "N/A"
-    elif sigma >= 6.0:
-        return "1-3s (World Class - N=1)"
-    elif sigma >= 5.0:
-        return "1-3s / 2-2s / R-4s (Excellent - N=2)"
-    elif sigma >= 4.0:
-        return "1-3s / 2-2s / R-4s / 4-1s (Good - N=2)"
-    elif sigma >= 3.0:
-        return "1-3s / 2-2s / R-4s / 4-1s / 10x (Marginal - N=2 or N=4)"
-    else:
-        return "Unacceptable (<3.0) - ต้องแก้ไข Root Cause / Re-calibrate ก่อนเลือก Rule"
-
 # ---------------------------------------------------------
 # Main Application Layout
 # ---------------------------------------------------------
@@ -241,36 +167,18 @@ with tab1:
     if test_name == "CBC":
         test_type = "CBC Multi-Part Scoring"
         num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
-    elif test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
-        test_type = f"{test_name} Multi-Parameter Scoring"
-        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
     else:
-        default_mode_index = 1 if department in ["Immunology", "Microscopy", "Microbiology"] else 0
-        col_m1, col_m2 = st.columns([2, 1])
-        with col_m1:
-            test_type = st.radio(
-                "โหมดการประเมินผล", 
-                [
-                    "Quantitative (เชิงปริมาณ + Z-score & Sigma Metric)", 
-                    "Qualitative with Scoring (ประเมินด้วยคะแนน & % ภาพรวม)", 
-                    "Qualitative Basic (เทียบ Concordance ตรงๆ)"
-                ], 
-                index=default_mode_index,
-                horizontal=True
-            )
-        with col_m2:
-            num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=2, step=1)
+        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
 
     st.markdown("---")
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     nc_items = []
+    cbc_results_store = []
 
-    # กรณีพิเศษ CBC
+    # กรณี CBC
     if test_name == "CBC":
         st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC (อัตโนมัติ 8 รายการ พร้อม Lab Performance คิดจาก Lab DI อัตโนมัติ) และ ส่วนที่ 2 Slide Smear")
-        
-        cbc_results_store = []
         
         for s_idx in range(num_samples):
             st.markdown(f"##### 🩸 **ตัวอย่างที่ {s_idx + 1}**")
@@ -289,7 +197,7 @@ with tab1:
                 })
             df_part1 = pd.DataFrame(part1_data)
             
-            # ใช้ data_editor และคำนวณ Lab Performance แบบสดๆ ทันทีเมื่อค่า DI เปลี่ยน
+            # ใช้ data_editor เพียงตารางเดียว และคำนวณ Lab Performance ทันทีแบบ Real-time
             edited_part1 = st.data_editor(
                 df_part1,
                 key=f"cbc_p1_editor_{s_idx}",
@@ -302,14 +210,10 @@ with tab1:
                 }
             )
             
-            # อัปเดตช่อง Lab Performance ตาม Lab DI ที่ผู้ใช้กรอกเข้ามา
+            # อัปเดตช่อง Lab Performance ตาม Lab DI ที่ผู้ใช้กรอกเข้ามาสดๆ
             for i in range(len(edited_part1)):
                 di_val = float(edited_part1.loc[i, "Lab DI"])
                 edited_part1.loc[i, "Lab Performance"] = evaluate_di_performance(di_val)
-            
-            # แสดงตารางพร้อมอัปเดตผลประเมิน Lab Performance ทันที
-            st.markdown("ผลการประเมินประสิทธิภาพ (Lab Performance) แบบ Real-time:")
-            st.dataframe(edited_part1, use_container_width=True)
             
             for _, r in edited_part1.iterrows():
                 p_name = r["Parameter"]
@@ -386,17 +290,9 @@ with tab1:
                     'SD': sd_val,
                     'Performance': perf
                 })
-                
-                if perf in ["Unsatisfactory", "Serious problem"]:
-                    nc_items.append({
-                        "รายการ/Sample": f"{sample_id_input} - WBC diff ({p_name})",
-                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
-                        "ค่าเป้าหมาย (Assigned Value)": f"DI: {di_val:.2f}",
-                        "สถานะปัญหา": f"Performance: {perf}"
-                    })
 
             # ส่วนที่ 2.2 RBC morphology
-            st.markdown("**2.2 RBC morphology** (กรอก Lab Result และ Assigned Value เพื่อคิด Score รวมและ Performance)")
+            st.markdown("**2.2 RBC morphology**")
             p22_data = []
             for param in CBC_SLIDE_RBC_PARAMS:
                 p22_data.append({
@@ -424,16 +320,12 @@ with tab1:
             st.info(f"📊 คะแนนเฉลี่ย RBC morphology ของ {sample_id_input}: **{p22_avg_score:.2f}** | Performance: **{p22_perf}**")
             
             for _, r in edited_p22.iterrows():
-                p_name = r["Parameter"]
-                l_res = str(r["Lab Result"])
-                a_val = str(r["Assigned Value"])
-                
                 cbc_results_store.append({
                     'Sample_ID': sample_id_input,
                     'Section': 'Part 2.2: RBC morphology',
-                    'Item_Name': p_name,
-                    'Lab_Result': l_res,
-                    'Assigned_Value': a_val,
+                    'Item_Name': r["Parameter"],
+                    'Lab_Result': str(r["Lab Result"]),
+                    'Assigned_Value': str(r["Assigned Value"]),
                     'Lab_DI': np.nan,
                     'Mean': np.nan,
                     'SD': np.nan,
@@ -441,7 +333,7 @@ with tab1:
                 })
 
             # ส่วนที่ 2.3 Platelet estimation
-            st.markdown("**2.3 Platelet estimation** (กรอก Lab Result และ Assigned Value เพื่อคิด Score รวมและ Performance)")
+            st.markdown("**2.3 Platelet estimation**")
             p23_data = []
             for param in CBC_SLIDE_PLT_PARAMS:
                 p23_data.append({
@@ -469,66 +361,33 @@ with tab1:
             st.info(f"📊 คะแนนเฉลี่ย Platelet estimation ของ {sample_id_input}: **{p23_avg_score:.2f}** | Performance: **{p23_perf}**")
             
             for _, r in edited_p23.iterrows():
-                p_name = r["Parameter"]
-                l_res = str(r["Lab Result"])
-                a_val = str(r["Assigned Value"])
-                
                 cbc_results_store.append({
                     'Sample_ID': sample_id_input,
                     'Section': 'Part 2.3: Platelet estimation',
-                    'Item_Name': p_name,
-                    'Lab_Result': l_res,
-                    'Assigned_Value': a_val,
+                    'Item_Name': r["Parameter"],
+                    'Lab_Result': str(r["Lab Result"]),
+                    'Assigned_Value': str(r["Assigned Value"]),
                     'Lab_DI': np.nan,
                     'Mean': np.nan,
                     'SD': np.nan,
                     'Performance': p23_perf
                 })
 
-    # ส่วนอื่นๆ คงเดิม (Gram's stain, Blood parasite, UA, Quantitative, ฯลฯ)
-    elif test_name == "Gram's stain":
-        # (ระบบเดิม)
-        pass
-    elif test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
-        # (ระบบเดิม)
-        pass
-    elif test_name == "UA":
-        # (ระบบเดิม)
-        pass
-    elif "Quantitative" in test_type:
-        # (ระบบเดิม)
-        pass
-    elif "Scoring" in test_type:
-        # (ระบบเดิม)
-        pass
-    else:
-        # (ระบบเดิม)
-        pass
-
     # ส่วนทบทวนและวิเคราะห์สาเหตุ (Non-conformity)
     st.markdown("---")
     st.subheader("🔍 สรุปรายการที่ไม่เป็นไปตามข้อกำหนด & การทบทวนทางเทคนิค (ISO 15189)")
     
     if nc_items:
-        st.warning(f"⚠️ พบ {len(nc_items)} รายการที่ไม่เป็นไปตามข้อกำหนด/ไม่ผ่านเกณฑ์ กรุณาระบุสาเหตุและผลการทบทวนเพื่อแก้ไข")
-        nc_df = pd.DataFrame(nc_items)
-        st.dataframe(nc_df, use_container_width=True)
+        st.warning(f"⚠️ พบ {len(nc_items)} รายการที่ไม่ผ่านเกณฑ์ กรุณาระบุสาเหตุและแนวทางแก้ไข")
+        st.dataframe(pd.DataFrame(nc_items), use_container_width=True)
     else:
         st.success("✅ ผลการทดสอบทุกรายการผ่านเกณฑ์ตามข้อกำหนดทั้งหมด")
 
     col_rc1, col_rc2 = st.columns(2)
     with col_rc1:
-        root_cause = st.text_area(
-            "📌 สาเหตุที่ไม่ผ่าน / สิ่งที่ไม่เป็นไปตามข้อกำหนด (Root Cause Analysis)", 
-            placeholder="เช่น Identification Error, Over-decolorization, Human Error",
-            height=120
-        )
+        root_cause = st.text_area("📌 สาเหตุที่ไม่ผ่าน (Root Cause Analysis)", height=120)
     with col_rc2:
-        review_action = st.text_area(
-            "🛠️ ผลการทบทวน / มาตรการแก้ไขและป้องกัน (Corrective & Preventive Action / Management Review)", 
-            placeholder="เช่น ปรับปรุงเทคนิคการย้อม Gram, จัด Training การอ่านลักษณะ Morphology",
-            height=120
-        )
+        review_action = st.text_area("🛠️ ผลการทบทวน / มาตรการแก้ไข (Corrective & Preventive Action)", height=120)
 
     # ปุ่มบันทึกข้อมูล
     if st.button("💾 บันทึกผล EQA และบันทึกการทบทวน", type="primary"):
@@ -536,7 +395,6 @@ with tab1:
             st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
         else:
             new_rows = []
-            
             if test_name == "CBC":
                 for item in cbc_results_store:
                     new_rows.append({
@@ -573,18 +431,15 @@ with tab1:
             st.rerun()
 
 # =========================================================
-# TAB 2: Dashboard สรุปผล & Multirules
+# TAB 2 & TAB 3
 # =========================================================
 with tab2:
     st.header("📊 Dashboard สรุปผล & คำแนะนำ Westgard Multirules")
     if df.empty:
-        st.info("ยังไม่มีข้อมูลในระบบ กรุณากรอกข้อมูลใน Tab 'กรอกผล EQA'")
+        st.info("ยังไม่มีข้อมูลในระบบ")
     else:
         st.dataframe(df, use_container_width=True)
 
-# =========================================================
-# TAB 3: ประวัติและ Export ข้อมูล
-# =========================================================
 with tab3:
     st.header("📋 ประวัติข้อมูล EQA ทั้งหมด และการ Export")
     if df.empty:
