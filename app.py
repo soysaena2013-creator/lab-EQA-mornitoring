@@ -39,6 +39,10 @@ UA_OPTIONS = {
     "Blood": ["Negative", "Trace", "1+", "2+", "3+", "4+"]
 }
 
+# ตัวเลือกสำหรับ Gram's Stain ย่อย
+GRAM_REACTION_OPTIONS = ["Gram-positive", "Gram-negative", "Gram-variable", "No organism seen"]
+GRAM_MORPHOLOGY_OPTIONS = ["Cocci", "Diplococci", "Bacilli / Rods", "Coccobacilli", "Spirilla / Curved rods", "Filamentous rods", "Yeast cells / Budding yeast", "No organism seen"]
+
 # ตัวเลือกเชื้อและระยะสำหรับ Parasite & Stool
 SPECIES_OPTIONS = [
     "Plasmodium falciparum", "Plasmodium vivax", "Plasmodium malariae", "Plasmodium ovale", "Plasmodium knowlesi",
@@ -72,7 +76,7 @@ QUAL_OPTIONS = {
     "blood_bank": ["Group A", "Group B", "Group AB", "Group O", "Positive", "Negative"],
     "serology": ["Reactive", "Non-reactive", "Positive", "Negative", "Equivocal", "Inconclusive"],
     "pos_neg": ["Positive", "Negative", "Inconclusive"],
-    "stain": ["Found", "Not Found", "Gram Positive Cocci", "Gram Negative Bacilli", "Yeasts Found", "No Organism Found"],
+    "stain": ["Found", "Not Found", "Yeasts Found", "No Organism Found"],
     "titer": ["1:2", "1:4", "1:8", "1:16", "1:32", "1:64", "1:128", "1:256", "Negative"],
     "general": ["Positive", "Negative", "Reactive", "Non-reactive", "Equivocal", "Inconclusive", "Normal", "Abnormal"]
 }
@@ -114,7 +118,7 @@ def get_qual_options_for_test(test_name):
         return QUAL_OPTIONS["serology"]
     elif test_name in ["melioid titer"]:
         return QUAL_OPTIONS["titer"]
-    elif test_name in ["AFB", "Gram's stain", "KOH", "Indiaink preperation"]:
+    elif test_name in ["AFB", "KOH", "Indiaink preperation"]:
         return QUAL_OPTIONS["stain"]
     elif test_name in ["UPT", "FOB", "COVID-19 TEST", "Dengue NS1", "Methamphetamine screening test", "Marijuana screening test"]:
         return QUAL_OPTIONS["pos_neg"]
@@ -155,14 +159,14 @@ with tab1:
     with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
     with col_c2:
-        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Microscopy") if "Microscopy" in DEPARTMENTS else 0)
+        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS, index=DEPARTMENTS.index("Microbiology") if "Microbiology" in DEPARTMENTS else 0)
     with col_c3:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
         test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม") if selected_test == "อื่นๆ (ระบุเอง)" else selected_test
 
     # ตรวจสอบประเภทรายการ Multi-Parameter
-    if test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
+    if test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
         test_type = f"{test_name} Multi-Parameter Scoring"
         num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
     else:
@@ -187,9 +191,86 @@ with tab1:
 
     nc_items = []
 
-    # 1. กรณี Blood parasite & Stool examination
-    if test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
-        st.info(f"💡 **{test_name}**: หัวข้อย่อยถูกล็อกไว้ตามมาตรฐาน — ท่านสามารถเลือก/พิมพ์คำตอบได้มากกว่า 1 รายการ (Multi-select) ในช่อง Lab Result และ Assigned Value โดยไม่ต้องกดเพิ่มบรรทัดใหม่")
+    # 1. กรณี Gram's stain
+    if test_name == "Gram's stain":
+        st.info("💡 **Gram's stain**: กรอกผลแยกตาม 2 หัวข้อย่อย ได้แก่ การติดสี (Gram Reaction) และ รูปร่างของแบคทีเรีย (Morphology)")
+        
+        gram_results = {}
+        total_obtained_all_samples = 0.0
+        total_max_all_samples = 0.0
+
+        for s_idx in range(num_samples):
+            st.markdown(f"##### 🧫 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"gram_sid_key_{s_idx}")
+            
+            categories = ["การติดสี (Gram Reaction)", "รูปร่างของแบคทีเรีย (Morphology)"]
+            sample_obtained = 0.0
+            sample_max = 0.0
+            sample_details = []
+
+            with st.expander(f"📌 กรอกผล Gram's stain สำหรับ {sample_id_input}", expanded=True):
+                for cat in categories:
+                    st.markdown(f"**🔹 {cat}**")
+                    col_res1, col_res2, col_sc1, col_sc2 = st.columns([3, 3, 1, 1])
+                    
+                    opts = GRAM_REACTION_OPTIONS if cat == "การติดสี (Gram Reaction)" else GRAM_MORPHOLOGY_OPTIONS
+                    
+                    with col_res1:
+                        lab_ans = st.selectbox(f"Lab Result ({cat})", options=opts, key=f"lab_gram_{s_idx}_{cat}")
+                    with col_res2:
+                        assign_ans = st.selectbox(f"Assigned Value ({cat})", options=opts, key=f"ass_gram_{s_idx}_{cat}")
+
+                    with col_sc1:
+                        obt_score = st.number_input("คะแนนได้", min_value=0.0, value=1.0, step=0.5, key=f"obt_gram_{s_idx}_{cat}")
+                    with col_sc2:
+                        max_score = st.number_input("คะแนนเต็ม", min_value=0.1, value=1.0, step=0.5, key=f"max_gram_{s_idx}_{cat}")
+
+                    sample_obtained += obt_score
+                    sample_max += max_score
+
+                    sample_details.append({
+                        "หัวข้อย่อย": cat,
+                        "Lab Result": lab_ans,
+                        "Assigned Value": assign_ans,
+                        "คะแนนที่ได้": obt_score,
+                        "คะแนนเต็ม": max_score
+                    })
+
+                    if lab_ans != assign_ans or obt_score < max_score:
+                        nc_items.append({
+                            "รายการ/Sample": f"{sample_id_input} - Gram's stain ({cat})",
+                            "ผลตรวจห้องปฏิบัติการ": lab_ans,
+                            "ค่าเป้าหมาย (Assigned Value)": assign_ans,
+                            "สถานะปัญหา": f"Mismatch / คะแนนได้ {obt_score}/{max_score}"
+                        })
+
+            total_obtained_all_samples += sample_obtained
+            total_max_all_samples += sample_max
+            gram_results[sample_id_input] = (pd.DataFrame(sample_details), sample_obtained, sample_max)
+            st.caption(f"คะแนนรวมเฉพาะ {sample_id_input}: **{sample_obtained:.1f} / {sample_max:.1f}**")
+
+        overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
+        overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
+
+        if overall_std_score >= 4.0:
+            eval_status = "Excellent"
+        elif 3.50 <= overall_std_score < 4.0:
+            eval_status = "Good"
+        elif 3.00 <= overall_std_score < 3.50:
+            eval_status = "Satisfactory"
+        else:
+            eval_status = "Unsatisfactory"
+
+        st.markdown("---")
+        st.markdown("#### 🎯 ผลการสรุปคะแนนภาพรวม Gram's stain (รวมทุก Sample)")
+        sc_c1, sc_c2, sc_c3 = st.columns(3)
+        sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
+        sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
+        sc_c3.metric("Scoring Evaluation", eval_status)
+
+    # 2. กรณี Blood parasite & Stool examination
+    elif test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
+        st.info(f"💡 **{test_name}**: หัวข้อย่อยถูกล็อกไว้ตามมาตรฐาน — ท่านสามารถเลือก/พิมพ์คำตอบได้มากกว่า 1 รายการ (Multi-select) ในช่อง Lab Result และ Assigned Value")
         
         bp_results = {}
         total_obtained_all_samples = 0.0
@@ -300,7 +381,7 @@ with tab1:
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
-    # 2. กรณี UA (Urinalysis)
+    # 3. กรณี UA (Urinalysis)
     elif test_name == "UA":
         st.info("💡 ป้อนค่า Assigned Value และคะแนนในแต่ละพารามิเตอร์ เพื่อคำนวณ Standard Score รวม")
         
@@ -376,7 +457,7 @@ with tab1:
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
-    # 3. กรณี Quantitative
+    # 4. กรณี Quantitative
     elif "Quantitative" in test_type:
         st.info("💡 สามารถปรับแต่งชื่อ Sample ID และกรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ได้ในตาราง")
         default_tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
@@ -439,7 +520,7 @@ with tab1:
                 st.metric("Sigma Metric", f"{row_res['Sigma']:.2f}" if not np.isnan(row_res['Sigma']) else "N/A")
                 st.caption(f"**Rule**: {row_res['Multirule']}")
 
-    # 4. กรณี Qualitative with Scoring
+    # 5. กรณี Qualitative with Scoring
     elif "Scoring" in test_type:
         qual_opts = get_qual_options_for_test(test_name)
         
@@ -508,7 +589,7 @@ with tab1:
             else:
                 st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
 
-    # 5. กรณี Qualitative Basic
+    # 6. กรณี Qualitative Basic
     else:
         st.info("💡 กรอกผลตรวจและค่าเป้าหมายเพื่อเทียบความสอดคล้อง (Concordance)")
         qual_opts = get_qual_options_for_test(test_name)
@@ -556,13 +637,13 @@ with tab1:
     with col_rc1:
         root_cause = st.text_area(
             "📌 สาเหตุที่ไม่ผ่าน / สิ่งที่ไม่เป็นไปตามข้อกำหนด (Root Cause Analysis)", 
-            placeholder="เช่น Identification Error, Missed Stage, Human Error",
+            placeholder="เช่น Identification Error, Over-decolorization, Human Error",
             height=120
         )
     with col_rc2:
         review_action = st.text_area(
             "🛠️ ผลการทบทวน / มาตรการแก้ไขและป้องกัน (Corrective & Preventive Action / Management Review)", 
-            placeholder="เช่น ให้เจ้าหน้าที่สอบทานสไลด์ซ้ำ, จัด Training เรื่องการจำแนกประเภท, ทำ Double Check กับภาพถ่ายอ้างอิง",
+            placeholder="เช่น ปรับปรุงเทคนิคการย้อม Gram, จัด Training การอ่านลักษณะ Morphology, สอบทานสไลด์ร่วมกับผู้เชี่ยวชาญ",
             height=120
         )
 
@@ -573,8 +654,44 @@ with tab1:
         else:
             new_rows = []
             
+            # บันทึก Gram's stain
+            if test_name == "Gram's stain":
+                for s_label, (sub_df, sub_tot_obt, sub_tot_m) in gram_results.items():
+                    for _, r in sub_df.iterrows():
+                        cat_name = str(r['หัวข้อย่อย'])
+                        l_val = str(r['Lab Result'])
+                        a_val = str(r['Assigned Value'])
+                        sub_obt = float(r['คะแนนที่ได้'])
+                        sub_max = float(r['คะแนนเต็ม'])
+                        
+                        new_rows.append({
+                            'Cycle': cycle,
+                            'Department': department,
+                            'Test_Name': f"Gram's stain ({cat_name})",
+                            'Sample_ID': s_label,
+                            'Test_Type': 'Qualitative (Gram\'s stain Sub-parameter)',
+                            'Lab_Result': l_val,
+                            'Assigned_Value': a_val,
+                            'SD_Group': np.nan,
+                            'Z_Score': np.nan,
+                            'Interpretation': "Match" if l_val == a_val else "Mismatch",
+                            'Lab_SD': np.nan,
+                            'Lab_CV': np.nan,
+                            'TEa_Percent': np.nan,
+                            'Bias_Percent': np.nan,
+                            'Sigma_Metric': np.nan,
+                            'Recommended_Multirule': 'N/A',
+                            'Score_Obtained': sub_obt,
+                            'Max_Score': sub_max,
+                            'Score_Percent': round(overall_score_pct, 2),
+                            'Standard_Score': round(overall_std_score, 2),
+                            'Status': eval_status,
+                            'Root_Cause': root_cause,
+                            'Review_Action': review_action
+                        })
+
             # บันทึกกลุ่ม Blood parasite / Stool
-            if test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
+            elif test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
                 for s_label, (sub_df, sub_tot_obt, sub_tot_m) in bp_results.items():
                     for _, r in sub_df.iterrows():
                         cat_name = str(r['หัวข้อย่อย'])
@@ -762,7 +879,6 @@ with tab2:
     if df.empty:
         st.info("ยังไม่มีข้อมูลในระบบ กรุณากรอกข้อมูลใน Tab 'กรอกผล EQA'")
     else:
-        # ตัวกรองข้อมูล (Filter)
         col_f1, col_f2 = st.columns(2)
         with col_f1:
             selected_dept = st.selectbox("เลือกสาขาห้องปฏิบัติการ", ["ทั้งหมด"] + list(df['Department'].unique()))
@@ -773,7 +889,6 @@ with tab2:
         if selected_cycle != "ทั้งหมด":
             filtered_df = filtered_df[filtered_df['Cycle'] == selected_cycle]
 
-        # Key Metrics Summary
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("จำนวนรายการทั้งหมด", len(filtered_df))
         
@@ -790,7 +905,6 @@ with tab2:
 
         st.markdown("---")
         
-        # กราฟแสดง Sigma Metric สำหรับรายการ Quantitative
         if not quant_df.empty:
             st.subheader("📈 Performance Metrics (Sigma Metric)")
             fig_sigma = px.bar(
@@ -806,7 +920,6 @@ with tab2:
             fig_sigma.add_hline(y=3.0, line_dash="dash", line_color="red", annotation_text="3 Sigma (Minimum Performance)")
             st.plotly_chart(fig_sigma, use_container_width=True)
 
-        # ตารางสรุป Multirules ที่แนะนำ
         st.subheader("🎯 ตารางแนะนำการเลือก Westgard Rules ตามค่า Sigma Metric")
         if not quant_df.empty:
             summary_rules = quant_df[['Test_Name', 'Sample_ID', 'Sigma_Metric', 'Recommended_Multirule']].drop_duplicates()
