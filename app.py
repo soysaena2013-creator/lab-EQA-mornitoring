@@ -164,19 +164,17 @@ with tab1:
     if test_name == "Syphilis":
         test_method = st.selectbox("วิธีที่ใช้ทดสอบ (Test Method)", QUAL_OPTIONS["syphilis_methods"])
 
-    if test_name == "CBC":
-        test_type = "CBC Multi-Part Scoring"
-        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
-    else:
-        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
+    num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
 
     st.markdown("---")
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     nc_items = []
-    cbc_results_store = []
+    store_data = []
 
-    # กรณี CBC
+    # ==========================================
+    # 1. กรณี CBC (Custom Multi-Part)
+    # ==========================================
     if test_name == "CBC":
         st.info("💡 **CBC**: แบ่งการบันทึกเป็น 2 ส่วนหลัก ได้แก่ ส่วนที่ 1 CBC และ ส่วนที่ 2 Slide Smear")
         
@@ -219,15 +217,13 @@ with tab1:
                 di_val = float(r["Lab DI"])
                 perf = str(r["Lab Performance"])
                 
-                cbc_results_store.append({
+                store_data.append({
                     'Sample_ID': sample_id_input,
                     'Section': 'Part 1: CBC',
                     'Item_Name': p_name,
                     'Lab_Result': str(l_res),
                     'Assigned_Value': 'N/A',
                     'Lab_DI': di_val,
-                    'Mean': np.nan,
-                    'SD': np.nan,
                     'Performance': perf
                 })
                 
@@ -249,8 +245,6 @@ with tab1:
             for param in CBC_SLIDE_WBC_PARAMS:
                 p21_data.append({
                     "Parameter": param,
-                    "Mean": 0.0,
-                    "SD": 0.0,
                     "Lab Result": 0.0,
                     "Lab DI": 0.0,
                     "Lab Performance": "Excellent"
@@ -263,8 +257,6 @@ with tab1:
                 use_container_width=True,
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Mean": st.column_config.NumberColumn("Mean", format="%.2f"),
-                    "SD": st.column_config.NumberColumn("SD", format="%.2f"),
                     "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f"),
                     "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f"),
                     "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True)
@@ -279,19 +271,15 @@ with tab1:
                 p_name = r["Parameter"]
                 l_res = float(r["Lab Result"])
                 di_val = float(r["Lab DI"])
-                mean_val = float(r["Mean"])
-                sd_val = float(r["SD"])
                 perf = str(r["Lab Performance"])
                 
-                cbc_results_store.append({
+                store_data.append({
                     'Sample_ID': sample_id_input,
                     'Section': 'Part 2.1: WBC diff',
                     'Item_Name': p_name,
                     'Lab_Result': str(l_res),
                     'Assigned_Value': 'N/A',
                     'Lab_DI': di_val,
-                    'Mean': mean_val,
-                    'SD': sd_val,
                     'Performance': perf
                 })
                 
@@ -303,8 +291,8 @@ with tab1:
                         "สถานะปัญหา": f"Performance: {perf}"
                     })
 
-            # ส่วนที่ 2.2 RBC morphology (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเองด้านล่าง)
-            st.markdown("**2.2 RBC morphology** (กรอก 'seen' หรือเว้นว่างหากไม่พบ)")
+            # ส่วนที่ 2.2 RBC morphology (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเอง)
+            st.markdown("**2.2 RBC morphology** (พิมพ์ 'seen' หรือเว้นว่างหากไม่พบ)")
             p22_data = []
             for param in CBC_SLIDE_RBC_PARAMS:
                 p22_data.append({
@@ -320,8 +308,8 @@ with tab1:
                 use_container_width=True,
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.TextColumn("Lab Result (พิมพ์ 'seen' หรือเว้นว่าง)"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value (พิมพ์ 'seen' หรือเว้นว่าง)")
+                    "Lab Result": st.column_config.TextColumn("Lab Result"),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
                 }
             )
             
@@ -330,20 +318,18 @@ with tab1:
             st.info(f"📊 คะแนนรวม RBC morphology: **{p22_total_score:.2f}** | Performance รวม: **{p22_perf}**")
             
             for _, r in edited_p22.iterrows():
-                cbc_results_store.append({
+                store_data.append({
                     'Sample_ID': sample_id_input,
                     'Section': 'Part 2.2: RBC morphology',
                     'Item_Name': r["Parameter"],
                     'Lab_Result': str(r["Lab Result"]),
                     'Assigned_Value': str(r["Assigned Value"]),
                     'Lab_DI': np.nan,
-                    'Mean': np.nan,
-                    'SD': np.nan,
                     'Performance': p22_perf
                 })
 
-            # ส่วนที่ 2.3 Platelet estimation (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเองด้านล่าง)
-            st.markdown("**2.3 Platelet estimation** (กรอก 'seen' หรือเว้นว่างหากไม่พบ)")
+            # ส่วนที่ 2.3 Platelet estimation (กรอก 'seen' หรือเว้นว่าง, กรอกคะแนนรวมเอง)
+            st.markdown("**2.3 Platelet estimation** (พิมพ์ 'seen' หรือเว้นว่างหากไม่พบ)")
             p23_data = []
             for param in CBC_SLIDE_PLT_PARAMS:
                 p23_data.append({
@@ -359,8 +345,8 @@ with tab1:
                 use_container_width=True,
                 column_config={
                     "Parameter": st.column_config.TextColumn("Parameter", disabled=True),
-                    "Lab Result": st.column_config.TextColumn("Lab Result (พิมพ์ 'seen' หรือเว้นว่าง)"),
-                    "Assigned Value": st.column_config.TextColumn("Assigned Value (พิมพ์ 'seen' หรือเว้นว่าง)")
+                    "Lab Result": st.column_config.TextColumn("Lab Result"),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value")
                 }
             )
             
@@ -369,16 +355,105 @@ with tab1:
             st.info(f"📊 คะแนนรวม Platelet estimation: **{p23_total_score:.2f}** | Performance รวม: **{p23_perf}**")
             
             for _, r in edited_p23.iterrows():
-                cbc_results_store.append({
+                store_data.append({
                     'Sample_ID': sample_id_input,
                     'Section': 'Part 2.3: Platelet estimation',
                     'Item_Name': r["Parameter"],
                     'Lab_Result': str(r["Lab Result"]),
                     'Assigned_Value': str(r["Assigned Value"]),
                     'Lab_DI': np.nan,
-                    'Mean': np.nan,
-                    'SD': np.nan,
                     'Performance': p23_perf
+                })
+
+    # ==========================================
+    # 2. กรณีสาขาอื่นๆ ทั่วไป (Quantitative / Qualitative)
+    # ==========================================
+    else:
+        is_qualitative = department in ["Immunology", "Microbiology", "Blood bank"] or test_name in ["UA", "Stool examination", "Blood parasite", "UPT", "COVID-19 TEST"]
+        
+        for s_idx in range(num_samples):
+            st.markdown(f"##### 🧪 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"std_sid_{s_idx}")
+            
+            if is_qualitative:
+                qual_choices = QUAL_OPTIONS["general"]
+                if department == "Blood bank":
+                    qual_choices = QUAL_OPTIONS["blood_bank"]
+                elif test_name == "Syphilis":
+                    qual_choices = QUAL_OPTIONS["syphilis"]
+                elif test_name == "AFB":
+                    qual_choices = QUAL_OPTIONS["afb"]
+                elif test_name == "Gram's stain":
+                    qual_choices = QUAL_OPTIONS["stain"]
+                elif test_name == "KOH":
+                    qual_choices = QUAL_OPTIONS["koh"]
+
+                col_q1, col_q2, col_q3 = st.columns(3)
+                with col_q1:
+                    lab_res = st.selectbox(f"ผลตรวจ Lab (Sample {s_idx+1})", qual_choices, key=f"lab_res_{s_idx}")
+                with col_q2:
+                    assigned_res = st.selectbox(f"ค่าเป้าหมาย Assigned Value (Sample {s_idx+1})", qual_choices, key=f"as_res_{s_idx}")
+                with col_q3:
+                    score_obt = st.number_input(f"คะแนนที่ได้ (Score)", min_value=0.0, max_value=100.0, value=4.0, step=0.1, key=f"sc_obt_{s_idx}")
+                
+                perf = evaluate_score_performance(score_obt)
+                st.info(f"📊 ประเมินผล: **{perf}**")
+
+                if perf in ["Unsatisfactory", "Serious problem"]:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - {test_name}",
+                        "ผลตรวจห้องปฏิบัติการ": str(lab_res),
+                        "ค่าเป้าหมาย (Assigned Value)": str(assigned_res),
+                        "สถานะปัญหา": f"Performance: {perf}"
+                    })
+
+                store_data.append({
+                    'Sample_ID': sample_id_input,
+                    'Section': 'Qualitative Test',
+                    'Item_Name': test_name,
+                    'Lab_Result': str(lab_res),
+                    'Assigned_Value': str(assigned_res),
+                    'Lab_DI': np.nan,
+                    'Performance': perf,
+                    'Score_Obtained': score_obt
+                })
+            else:
+                # เคมีคลินิก หรือทดสอบเชิงปริมาณทั่วไป (Quantitative)
+                col_qn1, col_qn2, col_qn3 = st.columns(3)
+                with col_qn1:
+                    lab_val = st.number_input(f"ผลตรวจ Lab Value (Sample {s_idx+1})", value=0.0, format="%.2f", key=f"qn_lab_{s_idx}")
+                with col_qn2:
+                    mean_val = st.number_input(f"ค่าเฉลี่ยกลุ่ม (Mean / Assigned)", value=0.0, format="%.2f", key=f"qn_mean_{s_idx}")
+                with col_qn3:
+                    sd_val = st.number_input(f"ค่า SD กลุ่ม", value=1.0, format="%.2f", key=f"qn_sd_{s_idx}")
+
+                z_score = (lab_val - mean_val) / sd_val if sd_val > 0 else 0.0
+                perf = evaluate_di_performance(z_score)
+                
+                tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
+                bias = abs((lab_val - mean_val) / mean_val * 100) if mean_val != 0 else 0.0
+                cv = (sd_val / mean_val * 100) if mean_val != 0 else 0.0
+                sigma = (tea - bias) / cv if cv > 0 else 0.0
+
+                st.info(f"📊 Z-Score / DI: **{z_score:.2f}** | Performance: **{perf}** | Sigma Metric: **{sigma:.2f}**")
+
+                if perf in ["Unsatisfactory", "Serious problem"]:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - {test_name}",
+                        "ผลตรวจห้องปฏิบัติการ": str(lab_val),
+                        "ค่าเป้าหมาย (Assigned Value)": f"Mean: {mean_val}",
+                        "สถานะปัญหา": f"Z-Score: {z_score:.2f} ({perf})"
+                    })
+
+                store_data.append({
+                    'Sample_ID': sample_id_input,
+                    'Section': 'Quantitative Test',
+                    'Item_Name': test_name,
+                    'Lab_Result': str(lab_val),
+                    'Assigned_Value': str(mean_val),
+                    'Lab_DI': z_score,
+                    'Performance': perf,
+                    'Sigma_Metric': sigma
                 })
 
     # ส่วนทบทวนและวิเคราะห์สาเหตุ (Non-conformity)
@@ -403,34 +478,33 @@ with tab1:
             st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
         else:
             new_rows = []
-            if test_name == "CBC":
-                for item in cbc_results_store:
-                    new_rows.append({
-                        'Cycle': cycle,
-                        'Department': department,
-                        'Test_Name': f"CBC - {item['Section']} ({item['Item_Name']})",
-                        'Test_Method': test_method,
-                        'Sample_ID': item['Sample_ID'],
-                        'Test_Type': 'CBC Detailed Breakdown',
-                        'Lab_Result': item['Lab_Result'],
-                        'Assigned_Value': item['Assigned_Value'],
-                        'SD_Group': np.nan,
-                        'Z_Score': np.nan,
-                        'Interpretation': item['Performance'],
-                        'Lab_SD': item['SD'] if not np.isnan(item['SD']) else np.nan,
-                        'Lab_CV': np.nan,
-                        'TEa_Percent': np.nan,
-                        'Bias_Percent': np.nan,
-                        'Sigma_Metric': np.nan,
-                        'Recommended_Multirule': 'N/A',
-                        'Score_Obtained': item['Lab_DI'] if not np.isnan(item['Lab_DI']) else np.nan,
-                        'Max_Score': np.nan,
-                        'Score_Percent': np.nan,
-                        'Standard_Score': np.nan,
-                        'Status': item['Performance'],
-                        'Root_Cause': root_cause,
-                        'Review_Action': review_action
-                    })
+            for item in store_data:
+                new_rows.append({
+                    'Cycle': cycle,
+                    'Department': department,
+                    'Test_Name': f"{test_name} - {item['Section']} ({item['Item_Name']})" if test_name == "CBC" else test_name,
+                    'Test_Method': test_method,
+                    'Sample_ID': item['Sample_ID'],
+                    'Test_Type': item['Section'],
+                    'Lab_Result': item['Lab_Result'],
+                    'Assigned_Value': item['Assigned_Value'],
+                    'SD_Group': np.nan,
+                    'Z_Score': item.get('Lab_DI', np.nan),
+                    'Interpretation': item['Performance'],
+                    'Lab_SD': np.nan,
+                    'Lab_CV': np.nan,
+                    'TEa_Percent': np.nan,
+                    'Bias_Percent': np.nan,
+                    'Sigma_Metric': item.get('Sigma_Metric', np.nan),
+                    'Recommended_Multirule': 'N/A',
+                    'Score_Obtained': item.get('Score_Obtained', np.nan),
+                    'Max_Score': np.nan,
+                    'Score_Percent': np.nan,
+                    'Standard_Score': np.nan,
+                    'Status': item['Performance'],
+                    'Root_Cause': root_cause,
+                    'Review_Action': review_action
+                })
 
             new_df = pd.DataFrame(new_rows)
             df = pd.concat([df, new_df], ignore_index=True)
