@@ -22,7 +22,7 @@ UA_PARAMETERS = [
     "Protein", "Glucose", "Ketone", "Urobilinogen", "Bilirubin", "Blood"
 ]
 
-# ปรับปรุง Options สำหรับ UA ตามที่กำหนด
+# Dropdown Options สำหรับ UA
 UA_OPTIONS = {
     "Specific Gravity": ["1.000", "1.005", "1.010", "1.015", "1.020", "1.025", "1.030", "1.035"],
     "pH": ["5.0", "5.5", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0"],
@@ -84,6 +84,7 @@ COLOR_MAP = {
     'Excellent': '#27ae60',
     'Good': '#2ecc71',
     'Satisfactory': '#f1c40f',
+    'Unsatisfactory': '#e74c3c',
     'Unacceptable': '#e74c3c',
     'Acceptable': '#2ecc71',
     'Warning': '#f39c12'
@@ -165,7 +166,7 @@ with tab1:
     st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     if test_name == "UA":
-        st.info("💡 กรอกผลตรวจ 10 พารามิเตอร์ย่อย (ข้อละ 1 คะแนน) ระบบจะคำนวณ Standard Score = (คะแนนรวม * 4.0) / คะแนนเต็ม และประเมิน Scoring Evaluation ให้ทันที")
+        st.info("💡 กรอกผลตรวจ 10 พารามิเตอร์ย่อย (ข้อละ 1 คะแนน) ระบบจะคำนวณ Standard Score = (คะแนนรวม * 4.0) / คะแนนเต็ม และประเมิน Scoring Evaluation ตามเกณฑ์ใหม่")
         
         ua_results = {}
         for s_idx in range(num_samples):
@@ -193,24 +194,25 @@ with tab1:
                 }
             )
             
-            # คำนวณ Standard Score สรุปเบื้องต้นแสดงผลแบบ Real-time
+            # คำนวณ Standard Score
             tot_obtained = sum(1.0 for _, r in edited_ua.iterrows() if str(r['Lab Result']).strip() == str(r['Assigned Value']).strip())
             tot_max = float(len(edited_ua))
-            std_score = (tot_obtained * 4.0) / tot_max if tot_max > 0 else 0.0
+            std_score = round((tot_obtained * 4.0) / tot_max, 2) if tot_max > 0 else 0.0
             score_pct = (tot_obtained / tot_max * 100.0) if tot_max > 0 else 0.0
             
-            if std_score >= 3.5:
+            # เกณฑ์ประเมิน Scoring Evaluation ใหม่ตามที่ระบุ
+            if std_score >= 4.0:
                 eval_status = "Excellent"
-            elif std_score >= 3.0:
+            elif 3.50 <= std_score < 4.0:
                 eval_status = "Good"
-            elif std_score >= 2.0:
+            elif 3.00 <= std_score < 3.50:
                 eval_status = "Satisfactory"
             else:
-                eval_status = "Unacceptable"
+                eval_status = "Unsatisfactory"
 
             sc_c1, sc_c2, sc_c3 = st.columns(3)
             sc_c1.metric(f"คะแนนรวม ({sample_label})", f"{tot_obtained:.0f} / {tot_max:.0f}")
-            sc_c2.metric("Standard Score (เต็ม 4.0)", f"{std_score:.2f}")
+            sc_c2.metric("Standard Score", f"{std_score:.2f}")
             sc_c3.metric("Scoring Evaluation", eval_status)
             st.markdown("---")
             
@@ -307,7 +309,7 @@ with tab1:
             calc_status = "Satisfactory"
             status_desc = "ยอมรับได้ / ผ่านเกณฑ์ขั้นต่ำ (70.0% - 79.9%)"
         else:
-            calc_status = "Unacceptable"
+            calc_status = "Unsatisfactory"
             status_desc = "ต้องปรับปรุง / ไม่ผ่านเกณฑ์ (< 70.0%)"
 
         st.markdown("#### 🎯 ผลการคำนวณคะแนนภาพรวม (Real-time Calculation)")
@@ -440,7 +442,7 @@ with tab1:
                 elif 70.0 <= overall_pct < 80.0:
                     overall_status = "Satisfactory"
                 else:
-                    overall_status = "Unacceptable"
+                    overall_status = "Unsatisfactory"
 
                 for _, row in edited_df.iterrows():
                     sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
@@ -479,7 +481,7 @@ with tab1:
                     sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
                     lab_res_str = str(row['Lab Result'])
                     assigned_val_str = str(row['Assigned Value'])
-                    status = "Excellent" if lab_res_str == assigned_val_str else "Unacceptable"
+                    status = "Excellent" if lab_res_str == assigned_val_str else "Unsatisfactory"
                     
                     new_rows.append({
                         'Cycle': cycle,
@@ -528,7 +530,7 @@ with tab2:
         excellent_cnt = len(filtered_df[filtered_df['Status'] == 'Excellent'])
         good_cnt = len(filtered_df[filtered_df['Status'] == 'Good'])
         sat_cnt = len(filtered_df[filtered_df['Status'] == 'Satisfactory'])
-        unacc_cnt = len(filtered_df[filtered_df['Status'] == 'Unacceptable'])
+        unsat_cnt = len(filtered_df[filtered_df['Status'].isin(['Unsatisfactory', 'Unacceptable'])])
         
         acc_legacy_cnt = len(filtered_df[filtered_df['Status'] == 'Acceptable'])
         passed_cnt = excellent_cnt + good_cnt + sat_cnt + acc_legacy_cnt
@@ -539,7 +541,7 @@ with tab2:
         m2.metric("ผ่านเกณฑ์ภาพรวม", f"{passed_cnt}", f"{pass_rate:.1f}%")
         m3.metric("Excellent", f"{excellent_cnt}")
         m4.metric("Good / Satisfactory", f"{good_cnt + sat_cnt}")
-        m5.metric("Unacceptable / Error", f"{unacc_cnt}")
+        m5.metric("Unsatisfactory", f"{unsat_cnt}")
 
         st.markdown("---")
         col_g1, col_g2 = st.columns(2)
@@ -571,14 +573,14 @@ with tab2:
             
             if not scoring_df.empty:
                 fig_score = px.bar(
-                    scoring_df, x='Test_Name', y='Score_Percent', color='Status',
+                    scoring_df, x='Test_Name', y='Standard_Score', color='Status',
                     color_discrete_map=COLOR_MAP,
-                    hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score', 'Standard_Score'],
-                    title="คะแนนประเมินร้อยละภาพรวม (%) - Qualitative / Scoring / UA"
+                    hover_data=['Cycle', 'Department', 'Sample_ID', 'Score_Obtained', 'Max_Score', 'Score_Percent'],
+                    title="Standard Score Distribution (UA / Scoring)"
                 )
-                fig_score.add_hline(y=100.0, line_dash="dot", line_color="green", annotation_text="Excellent (100%)")
-                fig_score.add_hline(y=80.0, line_dash="dash", line_color="#2ecc71", annotation_text="Good (80%)")
-                fig_score.add_hline(y=70.0, line_dash="dash", line_color="orange", annotation_text="Satisfactory (70%)")
+                fig_score.add_hline(y=4.0, line_dash="dot", line_color="green", annotation_text="Excellent (4.0)")
+                fig_score.add_hline(y=3.5, line_dash="dash", line_color="#2ecc71", annotation_text="Good (3.5)")
+                fig_score.add_hline(y=3.0, line_dash="dash", line_color="orange", annotation_text="Satisfactory (3.0)")
                 st.plotly_chart(fig_score, use_container_width=True)
 
             if quant_df.empty and scoring_df.empty:
