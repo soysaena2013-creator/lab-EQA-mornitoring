@@ -62,12 +62,13 @@ DEPARTMENTS = [
     "Blood bank"
 ]
 
+# อัปเดตเพิ่มรายการ "Blood parasite (digital slide)" ในสาขา Microscopy
 TEST_LISTS = {
     "Hematology": ["CBC", "PT&INR", "DCIP", "Hematocrit", "ESR", "Reticulocyte count", "VCT", "20 WBCT"],
     "Biochemistry": ["GLUCOSE", "BUN", "CREATININE", "URIC ACID", "CHOLESTEROL", "TRIGLYCERIDE", "HDL", "LDL", "TOTAL PROTEIN", "ALBUMIN", "TOTAL BILIRUBIN", "DIRECT BILIRUBIN", "AST", "ALT", "ALP", "CALCIUM", "MAGNESIUM", "PHOSPHORUS", "Na", "K", "Cl", "CO2", "Hba1c", "Micro-bilirubin", "Troponin I", "BGM STRIP"],
     "Immunology": ["HBsAg", "HBsAb", "anti-HCV", "HIV", "Syphilis", "Leptospira antibody", "Scrub typhus antibody", "Rheumatoid factor", "melioid titer", "COVID-19 TEST", "Influenza A+B TEST", "COVID-19/Influenza A+B test", "COVID-19/Influenza A+B/RSV test", "Dengue NS1"],
     "Microbiology": ["AFB", "Gram's stain", "TB lamp", "KOH", "Indiaink preperation"],
-    "Microscopy": ["UA", "Blood parasite", "Urine sediment by photo observation", "Stool examination", "FOB", "UPT", "Methamphetamine screening test", "Marijuana screening test", "Fern test"],
+    "Microscopy": ["UA", "Blood parasite", "Blood parasite (digital slide)", "Urine sediment by photo observation", "Stool examination", "FOB", "UPT", "Methamphetamine screening test", "Marijuana screening test", "Fern test"],
     "Blood bank": ["ABO grouping", "Rh grouping"]
 }
 
@@ -136,7 +137,8 @@ with tab1:
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
         test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม") if selected_test == "อื่นๆ (ระบุเอง)" else selected_test
 
-    if test_name in ["UA", "Blood parasite"]:
+    # ตรวจสอบรายการที่เป็น Multi-Parameter Scoring
+    if test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)"]:
         test_type = f"{test_name} Multi-Parameter Scoring"
         num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
     else:
@@ -162,10 +164,10 @@ with tab1:
     nc_items = []
 
     # ==========================================
-    # กรณี 1: Blood parasite (สามารถแก้ไข Sample ID ได้)
+    # กรณี 1: Blood parasite & Blood parasite (digital slide)
     # ==========================================
-    if test_name == "Blood parasite":
-        st.info("💡 **Blood parasite**: กรอก/แก้ไขชื่อ Sample ID และผลตรวจ 3 หัวข้อ (ตระกูล/สายพันธุ์, ระยะที่พบ, %Parasitemia) โดยเพิ่ม/แก้ไขได้ ระบบจะรวมคะแนนคำนวณ Standard Score")
+    if test_name in ["Blood parasite", "Blood parasite (digital slide)"]:
+        st.info(f"💡 **{test_name}**: กรอก/แก้ไขชื่อ Sample ID และผลตรวจ 3 หัวข้อ (ตระกูล/สายพันธุ์, ระยะที่พบ, %Parasitemia) โดยเพิ่ม/แก้ไขได้ ระบบจะรวมคะแนนคำนวณ Standard Score")
         
         bp_results = {}
         total_obtained_all_samples = 0.0
@@ -229,7 +231,7 @@ with tab1:
                 cat = str(r['หัวข้อย่อย (Category)'])
                 if l_res != a_val or obt_sc < max_sc:
                     nc_items.append({
-                        "รายการ/Sample": f"{sample_id_input} - Blood parasite ({cat})",
+                        "รายการ/Sample": f"{sample_id_input} - {test_name} ({cat})",
                         "ผลตรวจห้องปฏิบัติการ": l_res,
                         "ค่าเป้าหมาย (Assigned Value)": a_val,
                         "สถานะปัญหา": f"Mismatch / คะแนนได้ {obt_sc}/{max_sc}"
@@ -251,14 +253,14 @@ with tab1:
             eval_status = "Unsatisfactory"
 
         st.markdown("---")
-        st.markdown("#### 🎯 ผลการสรุปคะแนนภาพรวม Blood parasite (รวมทุก Sample)")
+        st.markdown(f"#### 🎯 ผลการสรุปคะแนนภาพรวม {test_name} (รวมทุก Sample)")
         sc_c1, sc_c2, sc_c3 = st.columns(3)
         sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
     # ==========================================
-    # กรณี 2: UA (แก้ไข Sample ID ได้)
+    # กรณี 2: UA
     # ==========================================
     elif test_name == "UA":
         st.info("💡 สามารถแก้ไขชื่อ Sample ID และป้อนค่า Assigned Value พร้อมคะแนนในแต่ละพารามิเตอร์เพื่อคำนวณ Standard Score")
@@ -466,7 +468,7 @@ with tab1:
                 st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
 
     # ==========================================
-    # กรณี 3: Qualitative Basic รวมถึง Urine sediment by photo observation (แก้ไข Sample ID ได้)
+    # กรณี 3: Qualitative Basic รวมถึง Urine sediment by photo observation
     # ==========================================
     else:
         st.info("💡 สามารถคลิกในช่อง 'รหัสตัวอย่าง (Sample ID)' เพื่อเปลี่ยนชื่อ/รหัส Sample ได้โดยตรง")
@@ -533,7 +535,7 @@ with tab1:
         else:
             new_rows = []
             
-            if test_name == "Blood parasite":
+            if test_name in ["Blood parasite", "Blood parasite (digital slide)"]:
                 for s_label, (sub_df, sub_tot_obt, sub_tot_m) in bp_results.items():
                     for _, r in sub_df.iterrows():
                         cat_name = str(r['หัวข้อย่อย (Category)'])
@@ -545,9 +547,9 @@ with tab1:
                         new_rows.append({
                             'Cycle': cycle,
                             'Department': department,
-                            'Test_Name': f"Blood parasite ({cat_name})",
+                            'Test_Name': f"{test_name} ({cat_name})",
                             'Sample_ID': s_label,
-                            'Test_Type': 'Qualitative (Blood parasite Sub-parameter)',
+                            'Test_Type': f'Qualitative ({test_name} Sub-parameter)',
                             'Lab_Result': l_val,
                             'Assigned_Value': a_val,
                             'SD_Group': np.nan,
