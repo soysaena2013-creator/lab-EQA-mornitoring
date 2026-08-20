@@ -14,7 +14,7 @@ def load_data():
         return pd.read_csv(DATA_FILE)
     else:
         return pd.DataFrame(columns=[
-            'Cycle', 'Department', 'Test_Name', 'Test_Type',
+            'Cycle', 'Department', 'Test_Name', 'Sample_ID', 'Test_Type',
             'Lab_Result', 'Assigned_Value', 'SD', 'SDI', 'Status', 'Remark'
         ])
 
@@ -22,6 +22,9 @@ def save_data(df):
     df.to_csv(DATA_FILE, index=False)
 
 df = load_data()
+
+if 'Sample_ID' not in df.columns:
+    df['Sample_ID'] = "Sample 1"
 
 # ----------------------------------------------------
 # Master Data Configuration
@@ -44,7 +47,6 @@ TEST_LISTS = {
     "Blood bank": ["ABO grouping", "Rh grouping"]
 }
 
-# Qualitative Result Options per Category
 QUAL_OPTIONS = {
     "blood_bank": ["Group A", "Group B", "Group AB", "Group O", "Positive", "Negative"],
     "serology": ["Reactive", "Non-reactive", "Equivocal"],
@@ -71,115 +73,145 @@ def get_qual_options_for_test(test_name):
 st.title("🔬 ระบบติดตามและประเมินผลประสิทธิภาพ EQA")
 st.markdown("---")
 
-tab1, tab2, tab3 = st.tabs(["📝 กรอกผล EQA", "📊 Dashboard สรุปผล", "📋 ประวัติและ Export ข้อมูล"])
+tab1, tab2, tab3 = st.tabs(["📝 กรอกผล EQA (Multi-Sample)", "📊 Dashboard สรุปผล", "📋 ประวัติและ Export ข้อมูล"])
 
 # ====================================================
-# TAB 1: DYNAMIC DATA ENTRY FORM
+# TAB 1: MULTI-SAMPLE DATA ENTRY FORM
 # ====================================================
 with tab1:
-    st.header("แบบฟอร์มบันทึกผล EQA (Customized Form)")
+    st.header("แบบฟอร์มบันทึกผล EQA (รองรับหลาย Sample ต่อรอบ)")
     
-    col_c1, col_c2 = st.columns(2)
+    col_c1, col_c2, col_c3 = st.columns(3)
     with col_c1:
         cycle = st.text_input("รอบการทดสอบ (Cycle/Year)", value="1/2026")
-        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS)
-    
     with col_c2:
+        department = st.selectbox("สาขาห้องปฏิบัติการ", DEPARTMENTS)
+    with col_c3:
         available_tests = TEST_LISTS.get(department, []) + ["อื่นๆ (ระบุเอง)"]
         selected_test = st.selectbox("รายการทดสอบ (Test Name)", available_tests)
-        
-        if selected_test == "อื่นๆ (ระบุเอง)":
-            test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม")
-        else:
-            test_name = selected_test
+        test_name = st.text_input("ระบุชื่อรายการทดสอบเพิ่มเติม") if selected_test == "อื่นๆ (ระบุเอง)" else selected_test
 
-    st.markdown("---")
-    st.subheader(f"📋 ป้อนผลการตรวจ: {test_name if test_name else 'กรุณาเลือกรายการ'}")
-
-    # Set default test mode based on Department
     default_is_quant = department in ["Biochemistry", "Hematology"]
     
-    test_type = st.radio(
-        "โหมดการประเมินผล", 
-        ["Quantitative (เชิงปริมาณ - SDI)", "Qualitative (เชิงคุณภาพ - Concordance)"], 
-        index=0 if default_is_quant else 1,
-        horizontal=True
-    )
+    col_m1, col_m2 = st.columns([2, 1])
+    with col_m1:
+        test_type = st.radio(
+            "โหมดการประเมินผล", 
+            ["Quantitative (เชิงปริมาณ - SDI)", "Qualitative (เชิงคุณภาพ - Concordance)"], 
+            index=0 if default_is_quant else 1,
+            horizontal=True
+        )
+    with col_m2:
+        num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (2-6 ตัวอย่าง)", min_value=1, max_value=10, value=2, step=1)
 
-    lab_res_val = ""
-    assigned_val_str = ""
-    sdi = np.nan
-    sd_val = np.nan
+    st.markdown("---")
+    st.subheader(f"📋 ป้อนผลการตรวจสำหรับ: **{test_name}** ({num_samples} ตัวอย่าง)")
 
     if "Quantitative" in test_type:
-        st.info("💡 โหมดเชิงปริมาณ: ระบบจะคำนวณ SDI = (Lab Result - Assigned Value) / SD อัตโนมัติ")
-        col_q1, col_q2, col_q3 = st.columns(3)
-        with col_q1:
-            lab_res = st.number_input("ผลการตรวจของแล็บ (Lab Result)", value=0.0, format="%.2f")
-        with col_q2:
-            assigned_val = st.number_input("ค่าจริง/ค่าอ้างอิง (Assigned Value)", value=0.0, format="%.2f")
-        with col_q3:
-            sd_val = st.number_input("ค่า SD ของกลุ่ม (SD)", value=1.0, format="%.2f")
+        st.info("💡 กรอกรหัสตัวอย่าง, ผลของแล็บ, ค่า Assigned Value และค่า SD ในตารางด้านล่าง ระบบจะคำนวณ SDI และประเมินสถานะให้อัตโนมัติ")
         
-        lab_res_val = str(lab_res)
-        assigned_val_str = str(assigned_val)
-
-        if sd_val > 0:
-            sdi = (lab_res - assigned_val) / sd_val
-            abs_sdi = abs(sdi)
-            if abs_sdi <= 2.0:
-                status = "Acceptable"
-                st.success(f"✅ ค่า SDI: {sdi:.2f} | สถานะ: ผ่านเกณฑ์ (Acceptable)")
-            elif abs_sdi < 3.0:
-                status = "Warning"
-                st.warning(f"⚠️ ค่า SDI: {sdi:.2f} | สถานะ: เฝ้าระวัง (Warning)")
-            else:
-                status = "Unacceptable"
-                st.error(f"❌ ค่า SDI: {sdi:.2f} | สถานะ: ไม่ผ่านเกณฑ์ (Unacceptable)")
-        else:
-            sdi = 0.0
-            status = "Invalid"
-            st.warning("กรุณาระบุค่า SD ที่มากกว่า 0")
+        init_data = pd.DataFrame({
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
+            'Lab Result': [0.0] * num_samples,
+            'Assigned Value': [0.0] * num_samples,
+            'SD': [1.0] * num_samples
+        })
+        
+        edited_df = st.data_editor(
+            init_data, 
+            num_rows="dynamic", 
+            use_container_width=True,
+            column_config={
+                "Lab Result": st.column_config.NumberColumn(format="%.2f"),
+                "Assigned Value": st.column_config.NumberColumn(format="%.2f"),
+                "SD": st.column_config.NumberColumn(format="%.2f", min_value=0.01)
+            }
+        )
 
     else:
-        st.info("💡 โหมดเชิงคุณภาพ: ตัวเลือกคำตอบจะปรับตามประเภทรายการตรวจโดยอัตโนมัติ")
-        options = get_qual_options_for_test(test_name)
+        st.info("💡 เลือกตัวอย่างผลตรวจเชิงคุณภาพจากรายการ Dropdown ในตาราง")
+        qual_opts = get_qual_options_for_test(test_name)
         
-        col_ql1, col_ql2 = st.columns(2)
-        with col_ql1:
-            lab_res_val = st.selectbox("ผลการตรวจของแล็บ (Lab Result)", options, key="lab_res_qual")
-        with col_ql2:
-            assigned_val_str = st.selectbox("ค่าจริง/ค่าอ้างอิง (Assigned Value)", options, key="assigned_qual")
-
-        if lab_res_val == assigned_val_str:
-            status = "Acceptable"
-            st.success("✅ สถานะ: ผ่านเกณฑ์ (Concordant / Agree)")
-        else:
-            status = "Unacceptable"
-            st.error("❌ สถานะ: ไม่ผ่านเกณฑ์ (Discordant / Disagree)")
+        init_data = pd.DataFrame({
+            'รหัสตัวอย่าง (Sample ID)': [f"Sample {i+1}" for i in range(num_samples)],
+            'Lab Result': [qual_opts[0]] * num_samples,
+            'Assigned Value': [qual_opts[0]] * num_samples
+        })
+        
+        edited_df = st.data_editor(
+            init_data,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "Lab Result": st.column_config.SelectboxColumn("Lab Result", options=qual_opts, required=True),
+                "Assigned Value": st.column_config.SelectboxColumn("Assigned Value", options=qual_opts, required=True)
+            }
+        )
 
     remark = st.text_area("บันทึกเพิ่มเติม / สาเหตุกรณีไม่ผ่าน (Root Cause / Corrective Action)", placeholder="เช่น Reagent Lot No., Calibration Status, Human Error")
 
-    if st.button("💾 บันทึกผล EQA", type="primary"):
+    if st.button("💾 บันทึกผล EQA ทั้งหมด", type="primary"):
         if not test_name:
             st.error("กรุณาระบุชื่อรายการทดสอบก่อนบันทึก")
         else:
-            new_row = {
-                'Cycle': cycle,
-                'Department': department,
-                'Test_Name': test_name,
-                'Test_Type': 'Quantitative' if "Quantitative" in test_type else 'Qualitative',
-                'Lab_Result': lab_res_val,
-                'Assigned_Value': assigned_val_str,
-                'SD': sd_val,
-                'SDI': round(sdi, 2) if not np.isnan(sdi) else np.nan,
-                'Status': status,
-                'Remark': remark
-            }
-            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            new_rows = []
+            for _, row in edited_df.iterrows():
+                sample_id = str(row['รหัสตัวอย่าง (Sample ID)'])
+                
+                if "Quantitative" in test_type:
+                    lab_res = float(row['Lab Result'])
+                    assigned_val = float(row['Assigned Value'])
+                    sd_val = float(row['SD'])
+                    
+                    if sd_val > 0:
+                        sdi = (lab_res - assigned_val) / sd_val
+                        abs_sdi = abs(sdi)
+                        if abs_sdi <= 2.0:
+                            status = "Acceptable"
+                        elif abs_sdi < 3.0:
+                            status = "Warning"
+                        else:
+                            status = "Unacceptable"
+                    else:
+                        sdi = np.nan
+                        status = "Invalid"
+                        
+                    new_rows.append({
+                        'Cycle': cycle,
+                        'Department': department,
+                        'Test_Name': test_name,
+                        'Sample_ID': sample_id,
+                        'Test_Type': 'Quantitative',
+                        'Lab_Result': str(lab_res),
+                        'Assigned_Value': str(assigned_val),
+                        'SD': sd_val,
+                        'SDI': round(sdi, 2) if not np.isnan(sdi) else np.nan,
+                        'Status': status,
+                        'Remark': remark
+                    })
+                else:
+                    lab_res_str = str(row['Lab Result'])
+                    assigned_val_str = str(row['Assigned Value'])
+                    status = "Acceptable" if lab_res_str == assigned_val_str else "Unacceptable"
+                    
+                    new_rows.append({
+                        'Cycle': cycle,
+                        'Department': department,
+                        'Test_Name': test_name,
+                        'Sample_ID': sample_id,
+                        'Test_Type': 'Qualitative',
+                        'Lab_Result': lab_res_str,
+                        'Assigned_Value': assigned_val_str,
+                        'SD': np.nan,
+                        'SDI': np.nan,
+                        'Status': status,
+                        'Remark': remark
+                    })
+
+            df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
             save_data(df)
             st.cache_data.clear()
-            st.success(f"บันทึกข้อมูล '{test_name}' ({department}) เรียบร้อยแล้ว!")
+            st.success(f"บันทึกข้อมูล '{test_name}' รวม {len(new_rows)} ตัวอย่าง เรียบร้อยแล้ว!")
             st.rerun()
 
 # ====================================================
@@ -204,7 +236,7 @@ with tab2:
         pass_rate = (acceptable_tests / total_tests * 100) if total_tests > 0 else 0
 
         m1, m2, m3, m4, m5 = st.columns(5)
-        m1.metric("รายการทดสอบทั้งหมด", f"{total_tests} รายการ")
+        m1.metric("จำนวนตัวอย่างทั้งหมด", f"{total_tests} ตัวอย่าง")
         m2.metric("ผ่านเกณฑ์ (Pass)", f"{acceptable_tests}", f"{pass_rate:.1f}%")
         m3.metric("เฝ้าระวัง (Warning)", f"{warning_tests}")
         m4.metric("ไม่ผ่าน (Unacceptable)", f"{unacceptable_tests}")
@@ -227,9 +259,9 @@ with tab2:
             quant_df = filtered_df[filtered_df['Test_Type'] == 'Quantitative'].dropna(subset=['SDI'])
             if not quant_df.empty:
                 fig_sdi = px.scatter(
-                    quant_df, x='Test_Name', y='SDI', color='Status',
+                    quant_df, x='Sample_ID', y='SDI', color='Status', hover_name='Test_Name',
                     color_discrete_map={'Acceptable': '#2ecc71', 'Warning': '#f1c40f', 'Unacceptable': '#e74c3c'},
-                    hover_data=['Cycle', 'Department', 'Lab_Result', 'Assigned_Value'],
+                    hover_data=['Cycle', 'Department', 'Test_Name', 'Lab_Result', 'Assigned_Value'],
                     title="SDI Distribution (+2SD ถึง -2SD คือช่วงยอมรับได้)"
                 )
                 fig_sdi.add_hline(y=2.0, line_dash="dash", line_color="orange")
