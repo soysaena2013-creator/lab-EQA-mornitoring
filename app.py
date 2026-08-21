@@ -277,7 +277,7 @@ with tab1:
 
     nc_items = []
 
-    # 1. กรณี CBC (Complete Blood Count แยก 2 ส่วนตามโจทย์ใหม่)
+    # 1. กรณี CBC (Complete Blood Count แยก 2 ส่วนตามโครงสร้างใหม่)
     if test_name == "CBC":
         st.info("💡 ป้อนข้อมูลสำหรับ CBC (ส่วนที่ 1) และ Slide smear (ส่วนที่ 2: WBC differential count, RBC morphology และ Platelet estimation)")
         
@@ -319,7 +319,6 @@ with tab1:
                 di = float(r['Lab DI'])
                 perf = evaluate_di_performance(di)
                 
-                # อัปเดตค่าลงใน DataFrame โดยตรงเพื่อให้แสดงผลทันที
                 edited_cbc_p1.loc[idx, "Lab Performance"] = perf
                 
                 cbc_p1_rows_eval.append({"Parameter": p_name, "Lab Result": l_res, "Lab DI": di, "Performance": perf})
@@ -379,7 +378,7 @@ with tab1:
                         "สถานะปัญหา": f"Performance: {perf}"
                     })
 
-            # ส่วนย่อยที่ 2: RBC morphology
+            # ส่วนย่อยที่ 2: RBC morphology (ไม่มีคอลัมน์ score แยกย่อย มี Score รวมด้านล่าง)
             st.markdown("**2. RBC morphology**")
             rbc_morph_data = []
             for param in RBC_MORPHOLOGY_PARAMETERS:
@@ -403,9 +402,9 @@ with tab1:
             
             rbc_score = st.number_input(f"Score รวม RBC morphology ({sample_id_input})", min_value=0.0, max_value=4.0, value=3.5, step=0.1, key=f"rbc_score_{s_idx}")
             rbc_perf = evaluate_score_performance(rbc_score)
-            st.caption(f"ระดับ Performance ของ RBC morphology: **{rbc_perf}**")
+            st.caption(f"ระดับ Performance รวมของ RBC morphology: **{rbc_perf}**")
 
-            # ส่วนย่อยที่ 3: Platelet estimation
+            # ส่วนย่อยที่ 3: Platelet estimation (ไม่มีคอลัมน์ score แยกย่อย มี Score รวมด้านล่าง)
             st.markdown("**3. Platelet estimation**")
             plt_est_data = []
             for param in PLATELET_EST_PARAMETERS:
@@ -429,7 +428,7 @@ with tab1:
             
             plt_score = st.number_input(f"Score รวม Platelet estimation ({sample_id_input})", min_value=0.0, max_value=4.0, value=3.5, step=0.1, key=f"plt_score_{s_idx}")
             plt_perf = evaluate_score_performance(plt_score)
-            st.caption(f"ระดับ Performance ของ Platelet estimation: **{plt_perf}**")
+            st.caption(f"ระดับ Performance รวมของ Platelet estimation: **{plt_perf}**")
 
             cbc_results[sample_id_input] = {
                 "p1": cbc_p1_rows_eval,
