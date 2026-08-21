@@ -334,7 +334,7 @@ with tab1:
             # --- ส่วนที่ 2: Slide smear ---
             st.markdown("###### **ส่วนที่ 2: Slide smear**")
             
-            # ส่วนย่อยที่ 1: WBC differential count
+            # ส่วนย่อยที่ 1: WBC differential count (เพิ่มคอลัมน์ lab performance เป็นคอลัมน์สุดท้าย)
             st.markdown("**1. WBC differential count**")
             wbc_diff_data = []
             for param in WBC_DIFF_PARAMETERS:
@@ -343,7 +343,8 @@ with tab1:
                     "Lab Result": 0.0,
                     "Lab DI": 0.0,
                     "Mean": 0.0,
-                    "SD": 0.0
+                    "SD": 0.0,
+                    "lab performance": "excellent"
                 })
             
             wbc_diff_df = pd.DataFrame(wbc_diff_data)
@@ -356,18 +357,22 @@ with tab1:
                     "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f", required=True),
                     "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f", required=True),
                     "Mean": st.column_config.NumberColumn("Mean", format="%.2f", required=True),
-                    "SD": st.column_config.NumberColumn("SD", format="%.2f", required=True)
+                    "SD": st.column_config.NumberColumn("SD", format="%.2f", required=True),
+                    "lab performance": st.column_config.TextColumn("lab performance", disabled=True)
                 }
             )
             
             wbc_diff_rows_eval = []
-            for _, r in edited_wbc_diff.iterrows():
+            for idx, r in edited_wbc_diff.iterrows():
                 p_name = r['รายการย่อย']
                 l_res = float(r['Lab Result'])
                 di = float(r['Lab DI'])
                 mean_val = float(r['Mean'])
                 sd_val = float(r['SD'])
                 perf = evaluate_di_performance(di)
+                
+                edited_wbc_diff.loc[idx, "lab performance"] = perf
+                
                 wbc_diff_rows_eval.append({"Parameter": p_name, "Lab Result": l_res, "Lab DI": di, "Mean": mean_val, "SD": sd_val, "Performance": perf})
                 
                 if di > 1.0:
