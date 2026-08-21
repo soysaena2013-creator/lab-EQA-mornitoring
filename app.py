@@ -20,6 +20,13 @@ TEA_TABLE = {
     "K": 0.5, "Cl": 5.0, "Hba1c": 6.0, "DEFAULT": 10.0
 }
 
+# พารามิเตอร์ย่อยสำหรับ CBC 14 รายการ
+CBC_PARAMETERS = [
+    "Hb", "Hct", "RBC", "WBC", "Plt", 
+    "MCV", "MCH", "MCHC", "RDW", 
+    "Neutrophil", "Lymphocyte", "Monocyte", "Eosinophil", "Basophil"
+]
+
 # พารามิเตอร์ย่อยสำหรับ UA 10 รายการ
 UA_PARAMETERS = [
     "Specific Gravity", "pH", "Leukocytes", "Nitrite", 
@@ -202,7 +209,7 @@ with tab1:
         test_method = st.selectbox("วิธีที่ใช้ทดสอบ (Test Method)", QUAL_OPTIONS["syphilis_methods"])
 
     # ตรวจสอบประเภทรายการ Multi-Parameter
-    if test_name in ["UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
+    if test_name in ["CBC", "UA", "Blood parasite", "Blood parasite (digital slide)", "Stool examination", "Gram's stain"]:
         test_type = f"{test_name} Multi-Parameter Scoring"
         num_samples = st.number_input("จำนวนตัวอย่างในรอบนี้ (1-10 ตัวอย่าง)", min_value=1, max_value=10, value=1, step=1)
     else:
@@ -227,8 +234,96 @@ with tab1:
 
     nc_items = []
 
-    # 1. กรณี Gram's stain
-    if test_name == "Gram's stain":
+    # 1. กรณี CBC (Complete Blood Count)
+    if test_name == "CBC":
+        st.info("💡 ป้อนค่า Lab Result, Assigned Value และ SD Group ในแต่ละพารามิเตอร์ย่อยของ CBC เพื่อประเมิน Z-score และคำนวณคะแนนรวม")
+        
+        cbc_results = {}
+        total_obtained_all_samples = 0.0
+        total_max_all_samples = 0.0
+
+        for s_idx in range(num_samples):
+            st.markdown(f"##### 🩸 **ตัวอย่างที่ {s_idx + 1}**")
+            sample_id_input = st.text_input(f"ชื่อ/รหัสตัวอย่าง (Sample ID)", value=f"Sample {s_idx + 1}", key=f"cbc_sid_key_{s_idx}")
+            
+            cbc_data = []
+            for param in CBC_PARAMETERS:
+                cbc_data.append({
+                    "พารามิเตอร์ (Parameter)": param,
+                    "Lab Result": 10.0,
+                    "Assigned Value": 10.0,
+                    "SD Group": 1.0,
+                    "Interpretation": "Acceptable"
+                })
+            
+            cbc_df = pd.DataFrame(cbc_data)
+            edited_cbc = st.data_editor(
+                cbc_df,
+                key=f"cbc_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "พารามิเตอร์ (Parameter)": st.column_config.TextColumn("พารามิเตอร์", disabled=True),
+                    "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f", required=True),
+                    "Assigned Value": st.column_config.NumberColumn("Assigned Value (Peer Group)", format="%.2f", required=True),
+                    "SD Group": st.column_config.NumberColumn("SD Group", format="%.2f", required=True),
+                    "Interpretation": st.column_config.SelectboxColumn("Interpretation", options=["Acceptable", "Warning", "Unacceptable"], required=True)
+                }
+            )
+            
+            sample_obt = 0.0
+            sample_max = float(len(CBC_PARAMETERS))
+            
+            for _, r in edited_cbc.iterrows():
+                p_name = r['พารามิเตอร์ (Parameter)']
+                l_res, a_val, sd_grp = float(r['Lab Result']), float(r['Assigned Value']), float(r['SD Group'])
+                interp = str(r['Interpretation'])
+                
+                z_score = (l_res - a_val) / sd_grp if sd_grp > 0 else np.nan
+                
+                if interp == "Acceptable" and (np.isnan(z_score) or abs(z_score) <= 2.0):
+                    sample_obt += 1.0
+                elif interp == "Warning" or (not np.isnan(z_score) and 2.0 < abs(z_score) <= 3.0):
+                    sample_obt += 0.5
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - CBC ({p_name})",
+                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
+                        "ค่าเป้าหมาย (Assigned Value)": str(a_val),
+                        "สถานะปัญหา": f"Warning (Z-score: {z_score:.2f})"
+                    })
+                else:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - CBC ({p_name})",
+                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
+                        "ค่าเป้าหมาย (Assigned Value)": str(a_val),
+                        "สถานะปัญหา": f"Unacceptable (Z-score: {z_score:.2f})"
+                    })
+
+            total_obtained_all_samples += sample_obt
+            total_max_all_samples += sample_max
+            cbc_results[sample_id_input] = (edited_cbc, sample_obt, sample_max)
+            st.caption(f"คะแนนเฉพาะ {sample_id_input}: {sample_obt:.1f} / {sample_max:.1f}")
+
+        overall_std_score = round((total_obtained_all_samples * 4.0) / total_max_all_samples, 2) if total_max_all_samples > 0 else 0.0
+        overall_score_pct = (total_obtained_all_samples / total_max_all_samples * 100.0) if total_max_all_samples > 0 else 0.0
+
+        if overall_std_score >= 4.0:
+            eval_status = "Excellent"
+        elif 3.50 <= overall_std_score < 4.0:
+            eval_status = "Good"
+        elif 3.00 <= overall_std_score < 3.50:
+            eval_status = "Satisfactory"
+        else:
+            eval_status = "Unsatisfactory"
+
+        st.markdown("---")
+        st.markdown("#### 🎯 ผลการสรุปคะแนนภาพรวม CBC (รวมทุก Sample)")
+        sc_c1, sc_c2, sc_c3 = st.columns(3)
+        sc_c1.metric("คะแนนรวมทุก Sample", f"{total_obtained_all_samples:.1f} / {total_max_all_samples:.1f}")
+        sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
+        sc_c3.metric("Scoring Evaluation", eval_status)
+
+    # 2. กรณี Gram's stain
+    elif test_name == "Gram's stain":
         st.info("💡 **Gram's stain**: กรอกผลแยกตาม 2 หัวข้อย่อย ได้แก่ การติดสี (Gram Reaction) และ รูปร่างของแบคทีเรีย (Morphology)")
         
         gram_results = {}
@@ -304,7 +399,7 @@ with tab1:
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
-    # 2. กรณี Blood parasite & Stool examination
+    # 3. กรณี Blood parasite & Stool examination
     elif test_name in ["Blood parasite", "Blood parasite (digital slide)", "Stool examination"]:
         st.info(f"💡 **{test_name}**: หัวข้อย่อยถูกล็อกไว้ตามมาตรฐาน — ท่านสามารถเลือก/พิมพ์คำตอบได้มากกว่า 1 รายการ (Multi-select) ในช่อง Lab Result และ Assigned Value")
         
@@ -417,7 +512,7 @@ with tab1:
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
-    # 3. กรณี UA (Urinalysis)
+    # 4. กรณี UA (Urinalysis)
     elif test_name == "UA":
         st.info("💡 ป้อนค่า Assigned Value และคะแนนในแต่ละพารามิเตอร์ เพื่อคำนวณ Standard Score รวม")
         
@@ -493,7 +588,7 @@ with tab1:
         sc_c2.metric("Overall Standard Score", f"{overall_std_score:.2f}")
         sc_c3.metric("Scoring Evaluation", eval_status)
 
-    # 4. กรณี Quantitative
+    # 5. กรณี Quantitative
     elif "Quantitative" in test_type:
         st.info("💡 สามารถปรับแต่งชื่อ Sample ID และกรอกผล Lab, ค่า Peer Group (Assigned Value/SD), ค่า %CV Lab และ TEa% ได้ในตาราง")
         default_tea = TEA_TABLE.get(test_name, TEA_TABLE["DEFAULT"])
@@ -556,7 +651,7 @@ with tab1:
                 st.metric("Sigma Metric", f"{row_res['Sigma']:.2f}" if not np.isnan(row_res['Sigma']) else "N/A")
                 st.caption(f"**Rule**: {row_res['Multirule']}")
 
-    # 5. กรณี Qualitative with Scoring
+    # 6. กรณี Qualitative with Scoring
     elif "Scoring" in test_type:
         qual_opts = get_qual_options_for_test(test_name)
         
@@ -625,7 +720,7 @@ with tab1:
             else:
                 st.error(f"**ระดับผลการประเมิน**: {calc_status} — {status_desc}")
 
-    # 6. กรณี Qualitative Basic
+    # 7. กรณี Qualitative Basic
     else:
         st.info("💡 กรอกผลตรวจและค่าเป้าหมายเพื่อเทียบความสอดคล้อง (Concordance)")
         qual_opts = get_qual_options_for_test(test_name)
@@ -690,8 +785,48 @@ with tab1:
         else:
             new_rows = []
             
+            # บันทึก CBC
+            if test_name == "CBC":
+                for s_label, (sub_df, sub_tot_obt, sub_tot_m) in cbc_results.items():
+                    for _, r in sub_df.iterrows():
+                        p_name = str(r['พารามิเตอร์ (Parameter)'])
+                        l_val = float(r['Lab Result'])
+                        a_val = float(r['Assigned Value'])
+                        sd_grp = float(r['SD Group'])
+                        interp = str(r['Interpretation'])
+                        
+                        z_score = (l_val - a_val) / sd_grp if sd_grp > 0 else np.nan
+                        sub_obt = 1.0 if interp == "Acceptable" and (np.isnan(z_score) or abs(z_score) <= 2.0) else (0.5 if interp == "Warning" or (not np.isnan(z_score) and 2.0 < abs(z_score) <= 3.0) else 0.0)
+                        
+                        new_rows.append({
+                            'Cycle': cycle,
+                            'Department': department,
+                            'Test_Name': f"CBC ({p_name})",
+                            'Test_Method': test_method,
+                            'Sample_ID': s_label,
+                            'Test_Type': 'Quantitative (CBC Sub-parameter)',
+                            'Lab_Result': l_val,
+                            'Assigned_Value': a_val,
+                            'SD_Group': sd_grp,
+                            'Z_Score': z_score,
+                            'Interpretation': interp,
+                            'Lab_SD': np.nan,
+                            'Lab_CV': np.nan,
+                            'TEa_Percent': np.nan,
+                            'Bias_Percent': (abs(l_val - a_val) / a_val * 100) if a_val > 0 else np.nan,
+                            'Sigma_Metric': np.nan,
+                            'Recommended_Multirule': 'N/A',
+                            'Score_Obtained': sub_obt,
+                            'Max_Score': 1.0,
+                            'Score_Percent': round(overall_score_pct, 2),
+                            'Standard_Score': round(overall_std_score, 2),
+                            'Status': eval_status,
+                            'Root_Cause': root_cause,
+                            'Review_Action': review_action
+                        })
+
             # บันทึก Gram's stain
-            if test_name == "Gram's stain":
+            elif test_name == "Gram's stain":
                 for s_label, (sub_df, sub_tot_obt, sub_tot_m) in gram_results.items():
                     for _, r in sub_df.iterrows():
                         cat_name = str(r['หัวข้อย่อย'])
