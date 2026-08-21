@@ -277,6 +277,9 @@ with tab1:
 
     nc_items = []
 
+    # =========================================================
+# (แทนที่ส่วนของ CBC เดิมใน Tab 1)
+# =========================================================
     # 1. กรณี CBC (Complete Blood Count แยก 2 ส่วนตามโจทย์ใหม่)
     if test_name == "CBC":
         st.info("💡 ป้อนข้อมูลสำหรับ CBC (ส่วนที่ 1) และ Slide smear (ส่วนที่ 2: WBC differential count, RBC morphology และ Platelet estimation)")
@@ -294,7 +297,8 @@ with tab1:
                 cbc_part1_data.append({
                     "รายการย่อย": param,
                     "Lab Result": 0.0,
-                    "Lab DI": 0.0
+                    "Lab DI": 0.0,
+                    "Lab Performance": "excellent"
                 })
             
             cbc_p1_df = pd.DataFrame(cbc_part1_data)
@@ -305,17 +309,33 @@ with tab1:
                 column_config={
                     "รายการย่อย": st.column_config.TextColumn("รายการย่อย", disabled=True),
                     "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f", required=True),
-                    "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f", required=True)
+                    "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f", required=True),
+                    "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True)
                 }
             )
             
-            # ประเมิน performance จาก lab DI สำหรับส่วนที่ 1
+            # ประเมิน performance จาก lab DI สำหรับส่วนที่ 1 แบบ Real-time ตามเงื่อนไขใหม่
             cbc_p1_rows_eval = []
             for _, r in edited_cbc_p1.iterrows():
                 p_name = r['รายการย่อย']
                 l_res = float(r['Lab Result'])
                 di = float(r['Lab DI'])
-                perf = evaluate_di_performance(di)
+                
+                # เงื่อนไขการคำนวณ Lab Performance ตาม DI
+                if di <= 0.5:
+                    perf = "excellent"
+                elif 0.5 < di <= 1.0:
+                    perf = "Good"
+                elif 1.0 < di <= 2.0:
+                    perf = "satisfactory"
+                elif 2.0 < di <= 3.0:
+                    perf = "unsatisfactory"
+                else:
+                    perf = "serious problem"
+                
+                # อัปเดตค่าลงในตารางให้เด้งขึ้นมาทันที
+                edited_cbc_p1.loc[edited_cbc_p1['รายการย่อย'] == p_name, 'Lab Performance'] = perf
+                
                 cbc_p1_rows_eval.append({"Parameter": p_name, "Lab Result": l_res, "Lab DI": di, "Performance": perf})
                 
                 if di > 1.0:
@@ -325,6 +345,118 @@ with tab1:
                         "ค่าเป้าหมาย (Lab DI)": str(di),
                         "สถานะปัญหา": f"Performance: {perf}"
                     })
+
+            # --- ส่วนที่ 2: Slide smear ---
+            st.markdown("###### **ส่วนที่ 2: Slide smear**")
+            
+            # ส่วนย่อยที่ 1: WBC differential count
+            st.markdown("**1. WBC differential count**")
+            wbc_diff_data = []
+            for param in WBC_DIFF_PARAMETERS:
+                wbc_diff_data.append({
+                    "รายการย่อย": param,
+                    "Lab Result": 0.0,
+                    "Lab DI": 0.0,
+                    "Mean": 0.0,
+                    "SD": 0.0
+                })
+            
+            wbc_diff_df = pd.DataFrame(wbc_diff_data)
+            edited_wbc_diff = st.data_editor(
+                wbc_diff_df,
+                key=f"wbc_diff_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "รายการย่อย": st.column_config.TextColumn("รายการย่อย", disabled=True),
+                    "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f", required=True),
+                    "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f", required=True),
+                    "Mean": st.column_config.NumberColumn("Mean", format="%.2f", required=True),
+                    "SD": st.column_config.NumberColumn("SD", format="%.2f", required=True)
+                }
+            )
+            
+            wbc_diff_rows_eval = []
+            for _, r in edited_wbc_diff.iterrows():
+                p_name = r['รายการย่อย']
+                l_res = float(r['Lab Result'])
+                di = float(r['Lab DI'])
+                mean_val = float(r['Mean'])
+                sd_val = float(r['SD'])
+                perf = evaluate_di_performance(di)
+                wbc_diff_rows_eval.append({"Parameter": p_name, "Lab Result": l_res, "Lab DI": di, "Mean": mean_val, "SD": sd_val, "Performance": perf})
+                
+                if di > 1.0:
+                    nc_items.append({
+                        "รายการ/Sample": f"{sample_id_input} - WBC diff ({p_name})",
+                        "ผลตรวจห้องปฏิบัติการ": str(l_res),
+                        "ค่าเป้าหมาย (Lab DI)": str(di),
+                        "สถานะปัญหา": f"Performance: {perf}"
+                    })
+
+            # ส่วนย่อยที่ 2: RBC morphology
+            st.markdown("**2. RBC morphology**")
+            rbc_morph_data = []
+            for param in RBC_MORPHOLOGY_PARAMETERS:
+                rbc_morph_data.append({
+                    "รายการย่อย": param,
+                    "Lab Result": "normocytes",
+                    "Assigned Value": "normocytes"
+                })
+            
+            rbc_morph_df = pd.DataFrame(rbc_morph_data)
+            edited_rbc_morph = st.data_editor(
+                rbc_morph_df,
+                key=f"rbc_morph_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "รายการย่อย": st.column_config.TextColumn("รายการย่อย", disabled=True),
+                    "Lab Result": st.column_config.TextColumn("Lab Result", required=True),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value", required=True)
+                }
+            )
+            
+            rbc_score = st.number_input(f"Score รวม RBC morphology ({sample_id_input})", min_value=0.0, max_value=4.0, value=3.5, step=0.1, key=f"rbc_score_{s_idx}")
+            rbc_perf = evaluate_score_performance(rbc_score)
+            st.caption(f"ระดับ Performance ของ RBC morphology: **{rbc_perf}**")
+
+            # ส่วนย่อยที่ 3: Platelet estimation
+            st.markdown("**3. Platelet estimation**")
+            plt_est_data = []
+            for param in PLATELET_EST_PARAMETERS:
+                plt_est_data.append({
+                    "รายการย่อย": param,
+                    "Lab Result": "adequate",
+                    "Assigned Value": "adequate"
+                })
+            
+            plt_est_df = pd.DataFrame(plt_est_data)
+            edited_plt_est = st.data_editor(
+                plt_est_df,
+                key=f"plt_est_editor_{s_idx}",
+                use_container_width=True,
+                column_config={
+                    "รายการย่อย": st.column_config.TextColumn("รายการย่อย", disabled=True),
+                    "Lab Result": st.column_config.TextColumn("Lab Result", required=True),
+                    "Assigned Value": st.column_config.TextColumn("Assigned Value", required=True)
+                }
+            )
+            
+            plt_score = st.number_input(f"Score รวม Platelet estimation ({sample_id_input})", min_value=0.0, max_value=4.0, value=3.5, step=0.1, key=f"plt_score_{s_idx}")
+            plt_perf = evaluate_score_performance(plt_score)
+            st.caption(f"ระดับ Performance ของ Platelet estimation: **{plt_perf}**")
+
+            cbc_results[sample_id_input] = {
+                "p1": cbc_p1_rows_eval,
+                "wbc_diff": wbc_diff_rows_eval,
+                "rbc_score": rbc_score,
+                "rbc_perf": rbc_perf,
+                "plt_score": plt_score,
+                "plt_perf": plt_perf
+            }
+
+        st.markdown("---")
+        st.markdown("#### 🎯 ผลการสรุปภาพรวม CBC")
+        st.success("บันทึกข้อมูลโครงสร้าง CBC 2 ส่วนเรียบร้อยแล้ว")
 
             # --- ส่วนที่ 2: Slide smear ---
             st.markdown("###### **ส่วนที่ 2: Slide smear**")
