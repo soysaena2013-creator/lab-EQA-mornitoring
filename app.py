@@ -457,7 +457,6 @@ with tab1:
         st.markdown("---")
         st.markdown("#### 🎯 ผลการสรุปภาพรวม CBC")
         st.success("บันทึกข้อมูลโครงสร้าง CBC 2 ส่วนเรียบร้อยแล้ว")
-
             # --- ส่วนที่ 2: Slide smear ---
             st.markdown("###### **ส่วนที่ 2: Slide smear**")
             
