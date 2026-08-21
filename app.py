@@ -294,7 +294,8 @@ with tab1:
                 cbc_part1_data.append({
                     "รายการย่อย": param,
                     "Lab Result": 0.0,
-                    "Lab DI": 0.0
+                    "Lab DI": 0.0,
+                    "Lab Performance": "excellent"
                 })
             
             cbc_p1_df = pd.DataFrame(cbc_part1_data)
@@ -305,17 +306,22 @@ with tab1:
                 column_config={
                     "รายการย่อย": st.column_config.TextColumn("รายการย่อย", disabled=True),
                     "Lab Result": st.column_config.NumberColumn("Lab Result", format="%.2f", required=True),
-                    "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f", required=True)
+                    "Lab DI": st.column_config.NumberColumn("Lab DI", format="%.2f", required=True),
+                    "Lab Performance": st.column_config.TextColumn("Lab Performance", disabled=True)
                 }
             )
             
-            # ประเมิน performance จาก lab DI สำหรับส่วนที่ 1
+            # คำนวณและอัปเดต Lab Performance อัตโนมัติตามค่า Lab DI ที่ผู้ใช้กรอก
             cbc_p1_rows_eval = []
-            for _, r in edited_cbc_p1.iterrows():
+            for idx, r in edited_cbc_p1.iterrows():
                 p_name = r['รายการย่อย']
                 l_res = float(r['Lab Result'])
                 di = float(r['Lab DI'])
                 perf = evaluate_di_performance(di)
+                
+                # อัปเดตค่าลงใน DataFrame โดยตรงเพื่อให้แสดงผลทันที
+                edited_cbc_p1.loc[idx, "Lab Performance"] = perf
+                
                 cbc_p1_rows_eval.append({"Parameter": p_name, "Lab Result": l_res, "Lab DI": di, "Performance": perf})
                 
                 if di > 1.0:
