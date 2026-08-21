@@ -397,7 +397,7 @@ with tab1:
             
             rbc_score = st.number_input(f"Score รวม RBC morphology ({sample_id_input})", min_value=0.0, max_value=4.0, value=3.5, step=0.1, key=f"rbc_score_{s_idx}")
             rbc_perf = evaluate_score_performance(rbc_score)
-            st.caption(لระดับ Performance ของ RBC morphology: **{rbc_perf}**)
+            st.caption(f"ระดับ Performance ของ RBC morphology: **{rbc_perf}**")
 
             # ส่วนย่อยที่ 3: Platelet estimation
             st.markdown("**3. Platelet estimation**")
