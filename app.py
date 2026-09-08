@@ -52,8 +52,4 @@ with c9:
     st.metric("📉 9. ลดการสั่ง FT3 ซ้ำซ้อน", f"{val:.1f}%", delta="เป้าหมาย > 90%")
 
 st.markdown("---")
-st.info("📥 สั่งการบันทึกข้อมูลประจำเดือนใหม่ หรือดาวน์โหลดรายงาน Excel ได้ที่นี่")
-
-# ใช้ st.page_link แทน st.button เพื่อความเสถียรในการกดเปลี่ยนหน้า
-# แก้ไขบรรทัดสุดท้ายของ app.py
-st.page_link("pages/Data_Input.py", label="📝 ไปที่แบบฟอร์มบันทึกข้อมูล 10 หัวข้อ (Data Input Form)", use_container_width=True)
+st.info("👈 **การเปลี่ยนหน้า:** คลิกเลือกเมนู **Data Input** หรือ **app** ที่แถบ Sidebar ด้านซ้ายมือได้เลยครับ")

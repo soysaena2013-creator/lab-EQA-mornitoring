@@ -5,9 +5,6 @@ import io
 
 st.set_page_config(page_title="แบบฟอร์มบันทึก KPI-QI", page_icon="📥", layout="wide")
 
-# แก้ไขปุ่มย้อนกลับให้เป็น st.page_link เพื่อความเสถียร
-st.page_link("app.py", label="กลับสู่หน้า Command Center", icon="⬅️")
-
 st.title("📥 แบบฟอร์มบันทึกตัวชี้วัดคุณภาพ (KPI-QI 10 หัวข้อ)")
 st.caption("กลุ่มงานเทคนิคการแพทย์ โรงพยาบาลนาโพธิ์")
 
