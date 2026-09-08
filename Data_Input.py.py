@@ -5,8 +5,8 @@ import io
 
 st.set_page_config(page_title="แบบฟอร์มบันทึก KPI-QI", page_icon="📥", layout="wide")
 
-if st.button("⬅️ กลับสู่หน้า Command Center"):
-    st.switch_page("app.py")
+# แก้ไขปุ่มย้อนกลับให้เป็น st.page_link เพื่อความเสถียร
+st.page_link("app.py", label="กลับสู่หน้า Command Center", icon="⬅️")
 
 st.title("📥 แบบฟอร์มบันทึกตัวชี้วัดคุณภาพ (KPI-QI 10 หัวข้อ)")
 st.caption("กลุ่มงานเทคนิคการแพทย์ โรงพยาบาลนาโพธิ์")
@@ -99,9 +99,9 @@ with st.form("kpi_10_topics_form", clear_on_submit=False):
     # คำนวณ QA สรุป
     qa_df = pd.DataFrame(qa_results)
     total_tests_count = len(qa_df)
-    total_iqc_pct = (qa_df["IQC_Done"].sum() / total_tests_count) * 100
-    total_eqa_pct = (qa_df["EQA_Done"].sum() / total_tests_count) * 100
-    avg_eqa_acc = qa_df["EQA_Acc"].mean()
+    total_iqc_pct = (qa_df["IQC_Done"].sum() / total_tests_count) * 100 if total_tests_count > 0 else 0.0
+    total_eqa_pct = (qa_df["EQA_Done"].sum() / total_tests_count) * 100 if total_tests_count > 0 else 0.0
+    avg_eqa_acc = qa_df["EQA_Acc"].mean() if total_tests_count > 0 else 0.0
     overall_qa_kpi = (total_iqc_pct + total_eqa_pct + avg_eqa_acc) / 3
 
     st.success(f"📈 สรุปภาพรวม QA: IQC = {total_iqc_pct:.1f}% | EQA = {total_eqa_pct:.1f}% | ความถูกต้อง EQA = {avg_eqa_acc:.1f}% -> KPI รวม = {overall_qa_kpi:.1f}%")
@@ -318,7 +318,6 @@ if not df_records.empty:
     b_excel = io.BytesIO()
     with pd.ExcelWriter(b_excel, engine="openpyxl") as writer:
         df_records.to_excel(writer, index=False, sheet_name="KPI_10_Topics")
-        qa_df.to_excel(writer, index=False, sheet_name="QA_Detail_Latest")
 
     c_ex, c_csv = st.columns(2)
     with c_ex:
